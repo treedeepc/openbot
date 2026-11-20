@@ -1446,40 +1446,6 @@ html:not(.library-dragging) .library-row[data-actions]:is(:hover, :focus-within)
   height: 20px;
 }
 
-.library-side .ui-button.library-row-toggle {
-  position: absolute;
-  z-index: 1;
-  top: 5px;
-  width: 20px;
-  height: 20px;
-  min-width: 0;
-  padding: 0;
-  border-radius: var(--openbot-radius-xs);
-  inset-inline-start: calc(var(--library-row-start) + var(--library-row-indent) + 1px);
-  background: var(--openbot-bg-surface-raised);
-  color: var(--openbot-text-secondary);
-  opacity: 0;
-}
-
-.library-row:is(:hover, :focus-within) .library-row-toggle,
-.library-side .ui-button.library-row-toggle:focus-visible {
-  opacity: 1;
-}
-
-.library-side .ui-button.library-row-toggle:hover {
-  color: var(--openbot-text-primary);
-}
-
-.library-row-toggle > svg {
-  width: var(--openbot-icon-sm);
-  height: var(--openbot-icon-sm);
-  transition: transform var(--openbot-duration-fast) var(--openbot-ease-out);
-}
-
-.library-row-toggle:where([aria-expanded="true"]) > svg {
-  transform: rotate(90deg);
-}
-
 .library-row-count {
   position: absolute;
   top: 0;
@@ -1758,7 +1724,7 @@ html.library-dragging .library-row:not([data-drop="into"]) > .ui-button.library-
   background: transparent;
 }
 
-html.library-dragging .library-row :is(.library-row-actions, .library-row-toggle) {
+html.library-dragging .library-row .library-row-actions {
   opacity: 0;
 }
 
@@ -2255,7 +2221,6 @@ html:not(.library-dragging)
 
 @media (prefers-reduced-motion: reduce) {
   .library-collapse,
-  .library-row-toggle > svg,
   .library-section-chevron,
   .library-folder-card-sheet,
   .library-row,

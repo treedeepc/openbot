@@ -4,7 +4,6 @@ import {
   Button,
   buttonVariants,
   ChevronDown,
-  ChevronRight,
   Clock3,
   DropdownMenu,
   Ellipsis,
@@ -176,7 +175,6 @@ function SideRow(props: {
   out?: boolean | undefined;
   editing?: JSX.Element | undefined;
 }) {
-  const { t } = useText();
   const branched = () => props.branch !== undefined;
   const expanded = () => (props.collapsed ? "false" : "true");
   return (
@@ -208,6 +206,8 @@ function SideRow(props: {
           variant="ghost"
           class="library-row-main"
           aria-current={props.current ? "page" : undefined}
+          aria-expanded={props.branch === undefined ? undefined : expanded()}
+          aria-controls={props.branch === undefined ? undefined : branchId(props.branch)}
           onClick={() => props.onGo()}
           onKeyDown={(event) => {
             if (!branched() || (event.key !== "ArrowRight" && event.key !== "ArrowLeft")) return;
@@ -220,22 +220,6 @@ function SideRow(props: {
             {props.label}
           </span>
         </Button>
-        <Show when={props.branch}>
-          {(branch) => (
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon-sm"
-              class="library-row-toggle"
-              aria-label={t("files.folder.listOf", { name: props.label })}
-              aria-expanded={expanded()}
-              aria-controls={branchId(branch())}
-              onClick={() => props.onOpenChange?.(props.collapsed === true)}
-            >
-              <ChevronRight aria-hidden="true" />
-            </Button>
-          )}
-        </Show>
         <Show when={props.count}>
           {(count) => (
             <span class="library-row-count" aria-hidden="true">
