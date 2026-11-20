@@ -15,6 +15,10 @@
   as stuck instead of leaving only one message in the chat. You can carry on with a new requirement,
   hand the work to another member, or drop it, and a message that never reached its assistant can be
   sent again.
+- A stuck task in a channel chat can now be cut loose at once. The channel's lead can stop or drop a
+  run that another member owns, and you can drop a task without stopping it first. Stopping cuts the
+  running turn and frees its slot, so the next queued task can start right away. The task stays and
+  can be carried on later.
 
 ### Changed
 

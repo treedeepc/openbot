@@ -89,7 +89,6 @@ export const messages = {
   "error.backend.channelReferenceUnavailable": "رسالة القناة المشار إليها غير متاحة.",
   "error.backend.channelTaskNotFound": "لم يتم العثور على مهمة القناة.",
   "error.backend.channelTaskComplete": "هذه المهمة مكتملة بالفعل.",
-  "error.backend.channelTaskNotStopped": "يمكن إلغاء المهمة المتوقفة أو الفاشلة فقط.",
   "error.backend.channelSelectAgent": "اختر وكيلًا.",
   "error.backend.channelLeadRequired": "اختر وكيلًا رئيسيًا متاحًا للقناة أو عيّن هذه المهمة لعضو.",
   "error.backend.channelRoutingTooLong": "يتجاوز هذا الطلب حد سياق التوجيه. اختر عضوًا أو أرسل طلبًا أقصر.",

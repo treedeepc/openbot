@@ -65,7 +65,12 @@ export const CHANNEL_TOOL_DEFINITIONS: readonly { name: string; description: str
   },
   {
     name: "channel_cancel",
-    description: `Cancel a run that you own when a person asks to drop that work. Give the taskId of its request message or of a subtask: the whole run ends, with its running and queued subtasks. Messages stay. Not for the run of your current task. ${PERSON_ONLY}`,
+    description: `Cancel a run that you own when a person asks to drop that work. Give the taskId of its request message or of a subtask: the whole run ends, with its running and queued subtasks. Messages stay. Not for the run of your current task. As this channel's lead you may also cancel a run that another member owns. ${PERSON_ONLY}`,
+    shape: { taskId: z.string().min(1).max(INPUT_LIMITS.identifier) },
+  },
+  {
+    name: "channel_stop",
+    description: `Stop one task of this channel at once when it is stuck, frozen or wrong: its running turn is cut and the task pauses, so the next queued task can start. Give the taskId of its request message or of a subtask. As this channel's lead you may also stop a run that another member owns. The task stays and you can carry it on later. Not for the task of your current run. ${PERSON_ONLY}`,
     shape: { taskId: z.string().min(1).max(INPUT_LIMITS.identifier) },
   },
   {

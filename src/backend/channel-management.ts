@@ -47,6 +47,9 @@ export const PERSON_REQUEST_REQUIRED =
 export const PERSON_CANCEL_REQUIRED =
   "Only a person's request in this channel can cancel a run. This task started from a routine run or from an agent.";
 
+export const LEAD_STOP_REQUIRED =
+  "Only this channel's lead or a person can stop or cancel a run that another member owns. Ask one of them to do it.";
+
 export interface ChannelRoutineToolPort {
   list(channelId: string): ChannelRoutine[];
   create(input: CreateChannelRoutineInput): ChannelRoutine;

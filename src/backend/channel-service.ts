@@ -65,6 +65,7 @@ import {
   channelRoutineTool,
   channelWorkOwners,
   isChannelRoutineTool,
+  LEAD_STOP_REQUIRED,
   PERSON_CANCEL_REQUIRED,
   PERSON_REQUEST_REQUIRED,
   requestPerson,
@@ -939,8 +940,6 @@ export class ChannelService {
     if (!selected) return yield* channelFailure(new Error(sourceText("error.backend.channelTaskNotFound")));
     if (terminal(selected)) return yield* channelFailure(new Error(sourceText("error.backend.channelTaskComplete")));
     if (command.type === "cancel") {
-      if (selected.state !== "paused" && selected.state !== "failed")
-        return yield* channelFailure(new Error(sourceText("error.backend.channelTaskNotStopped")));
       return yield* this.#cancelTasks(channel, descendants(tasks, selected.rootTaskId), operationId);
     }
     if (command.type === "reassign") {
@@ -2966,6 +2965,45 @@ export class ChannelService {
     return result;
   });
 
+  readonly #stopAnyTask = Effect.fn("ChannelService.stopAnyTask")(function* (
+    this: ChannelService,
+    channelId: string,
+    callerTask: ChannelTask,
+    agentId: string,
+    operationId: string,
+    args: DynamicRecord,
+  ): Effect.fn.Return<unknown, ChannelOperationError> {
+    const refuse = (reason: string, logReason: string) => {
+      logger.warn("A channel stop was refused.", { channelId, agentId, reason: logReason });
+      return { accepted: false, reason };
+    };
+    if (!isString(args.taskId) || !args.taskId) return refuse("Provide the taskId of the task to stop.", "no task id");
+    const channel = yield* channelSync(() => this.store.get(channelId));
+    if (channel.archived) return yield* channelFailure(new Error(sourceText("error.backend.channelArchived")));
+    const tasks = yield* channelSync(() => this.store.tasks(channelId));
+    const selected = tasks.find((item) => item.id === args.taskId);
+    if (!selected)
+      return refuse("No task in this channel has that id. Use the taskId of a request message.", "unknown task");
+    const root = tasks.find((item) => item.id === selected.rootTaskId);
+    if (!root || terminal(root)) return refuse("That run has already ended.", "run ended");
+    if (root.id === callerTask.rootTaskId)
+      return refuse(
+        "This is the run of your current task. Do not stop it: finish the task or end your turn.",
+        "own run",
+      );
+    if (root.ownerAgentId !== agentId && channel.leadAgentId !== agentId)
+      return refuse(LEAD_STOP_REQUIRED, "not the lead");
+    yield* this.command(
+      { type: "stop", operationId, channelId, taskId: selected.id, recipientAgentId: null },
+      { id: agentId, name: this.memberName(agentId) },
+    );
+    return {
+      accepted: true,
+      stoppedTaskIds: descendants(tasks, selected.id).map((item) => item.id),
+      instruction: "That task is stopped and its running turn is cut. The channel can start the next task now.",
+    };
+  }).bind(this);
+
   readonly #cancelOwnRun = Effect.fn("ChannelService.cancelOwnRun")(function* (
     this: ChannelService,
     channelId: string,
@@ -3008,11 +3046,8 @@ export class ChannelService {
           result = refuse("That run has already ended.", "run ended");
           return;
         }
-        if (root.ownerAgentId !== agentId) {
-          result = refuse(
-            "You can cancel only a run that you own. A person can stop other work with the channel controls.",
-            "not the owner",
-          );
+        if (root.ownerAgentId !== agentId && channel.leadAgentId !== agentId) {
+          result = refuse(LEAD_STOP_REQUIRED, "not the owner");
           return;
         }
         if (root.id === callerTask.rootTaskId) {
@@ -3175,6 +3210,9 @@ export class ChannelService {
       const person = requester();
       if (!person) return yield* channelFailure(new Error(PERSON_CANCEL_REQUIRED));
       return yield* this.#cancelOwnRun(channelId, task, agentId, `tool:${turnId}:${callId}`, person, args);
+    }
+    if (tool === "channel_stop") {
+      return yield* this.#stopAnyTask(channelId, task, agentId, `tool:${turnId}:${callId}`, args);
     }
     if (CHANNEL_MANAGEMENT_TOOLS.has(tool)) {
       const person = requester();

@@ -87,7 +87,6 @@ export const messages = {
   "error.backend.channelReferenceUnavailable": "הודעת הערוץ שאליה מפנים אינה זמינה.",
   "error.backend.channelTaskNotFound": "משימת הערוץ לא נמצאה.",
   "error.backend.channelTaskComplete": "המשימה הזו כבר הושלמה.",
-  "error.backend.channelTaskNotStopped": "אפשר לבטל רק משימה שנעצרה או שנכשלה.",
   "error.backend.channelSelectAgent": "יש לבחור סוכן.",
   "error.backend.channelLeadRequired": "יש לבחור מוביל ערוץ זמין או להקצות את המשימה הזו לחבר.",
   "error.backend.channelRoutingTooLong": "הבקשה הזו חורגת ממגבלת הקשר הניתוב. יש לבחור חבר או לשלוח בקשה קצרה יותר.",
