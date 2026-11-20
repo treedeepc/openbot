@@ -566,9 +566,28 @@ export function createConversationViewScope(props: ConversationProps) {
     const id = panelThreadId();
     return id !== null && sideThreadIds().includes(id) ? id : null;
   };
+  const sidePanelsOpenedByHand = new Set<string>();
+  function collapseSidePanel() {
+    const agentId = conversationOwnerId(props);
+    if (agentId) sidePanelsOpenedByHand.delete(agentId);
+    hideBrowserPanel();
+  }
   function toggleSidePanel() {
-    if (sidePanelOpen()) hideBrowserPanel();
-    else showSidePanel();
+    const agentId = conversationOwnerId(props);
+    if (sidePanelOpen()) {
+      collapseSidePanel();
+      return;
+    }
+    if (agentId) sidePanelsOpenedByHand.add(agentId);
+    showSidePanel();
+  }
+  function showSidePanelOrCollapse() {
+    const agentId = conversationOwnerId(props);
+    if (agentId && sidePanelsOpenedByHand.has(agentId)) {
+      setActiveRightPanel("side-panel");
+      return;
+    }
+    collapseSidePanel();
   }
   function showSidePanel(startsBrowser = true) {
     const { panes, selected, files, file } = sidePanel();
@@ -599,7 +618,7 @@ export function createConversationViewScope(props: ConversationProps) {
     else if (file) {
       setActiveRightPanel("side-panel");
       openSidePanelFile(file.key);
-    } else setActiveRightPanel("side-panel");
+    } else showSidePanelOrCollapse();
   }
   function closePanelThread(id: string) {
     leavePanelThread(id, () => props.threads?.side.onClose(id));
@@ -653,7 +672,7 @@ export function createConversationViewScope(props: ConversationProps) {
     else if (file) {
       setActiveRightPanel("side-panel");
       openSidePanelFile(file.key);
-    } else setActiveRightPanel("side-panel");
+    } else showSidePanelOrCollapse();
   }
   function closeSidePanelFile(key: string) {
     const shown = filePreviewOpen() && sidePanel().file === key;
@@ -669,7 +688,7 @@ export function createConversationViewScope(props: ConversationProps) {
     const thread = sideThreadIds()[0];
     if (pane) openSidePanelPane(pane);
     else if (thread) openPanelThread(thread);
-    else setActiveRightPanel("side-panel");
+    else showSidePanelOrCollapse();
   }
   function closeShownSidePanelFile() {
     const key = sidePanel().file;
@@ -1495,7 +1514,7 @@ export function createConversationViewScope(props: ConversationProps) {
       }
       setOpenReactionMessageId(null);
       setExpandedEmojiMessageId(null);
-      hideBrowserPanel();
+      collapseSidePanel();
     };
     const closeActiveRemoteBrowserTab = (event: KeyboardEvent) => {
       if (
