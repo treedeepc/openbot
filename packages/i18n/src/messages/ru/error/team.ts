@@ -68,6 +68,7 @@ export const messages = {
   "error.team.channelDeleteUnsupported": "Это подключение не поддерживает удаление каналов.",
   "error.team.historyDeleteUnsupported": "Это подключение не поддерживает удаление истории.",
   "error.team.channelTaskCancelUnsupported": "Это подключение не поддерживает отмену задач каналов.",
+  "error.team.channelTaskHealthUnsupported": "Это соединение не поддерживает состояние и восстановление задач.",
   "error.team.membersCannotDeleteChannels": "Участники не могут удалять каналы.",
   "error.team.membersCannotDeleteChannelHistory": "Участники не могут удалять историю канала.",
   "error.team.membersCannotArchiveChannels": "Участники не могут архивировать каналы.",

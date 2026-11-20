@@ -3,7 +3,7 @@ import type { AvatarImageInput } from "./ipc-agents";
 import { isBoundedString, isIdentifier } from "./ipc-bounded-values";
 import { type ConversationMessage, isConversationMessage } from "./ipc-conversation-messages";
 import { optionalHistoryExtent } from "./ipc-decoding";
-import { type DynamicRecord, isDynamicRecord, isOneOf, isString } from "./runtime-values";
+import { type DynamicRecord, isDynamicRecord, isNumber, isOneOf, isString } from "./runtime-values";
 
 export const CHANNEL_CHATS_CAPABILITY = "channel-chats-v1";
 export const CHANNEL_DELETE_CAPABILITY = "channel-delete-v1";
@@ -102,6 +102,54 @@ export interface SetChannelImageInput {
 
 export type ChannelTaskState = "queued" | "running" | "waiting" | "paused" | "completed" | "failed" | "cancelled";
 
+export const CHANNEL_TASK_STALL_REASONS = [
+  "none",
+  "member-required",
+  "stalled",
+  "undelivered",
+  "awaiting-reply",
+  "agent-busy",
+] as const;
+export type ChannelTaskStallReason = (typeof CHANNEL_TASK_STALL_REASONS)[number];
+
+export const CHANNEL_TASK_HEALTH_LEVELS = ["none", "slow", "stuck"] as const;
+export type ChannelTaskHealthLevel = (typeof CHANNEL_TASK_HEALTH_LEVELS)[number];
+
+export const CHANNEL_TASK_HEALTH_THRESHOLDS = {
+  slowMs: 5 * 60_000,
+  stuckMs: 15 * 60_000,
+} as const;
+
+export const CHANNEL_DELIVERY_STATUSES = ["queued", "running", "delivered", "failed", "interrupted"] as const;
+export type ChannelDeliveryStatus = (typeof CHANNEL_DELIVERY_STATUSES)[number];
+
+export interface ChannelDeliveryReceipt {
+  deliveryId: string;
+  taskId: string;
+  agentId: string;
+  status: ChannelDeliveryStatus;
+  at: string | null;
+  error: string | null;
+  resendable: boolean;
+}
+
+export interface ChannelTaskHealth {
+  taskId: string;
+  stallReason: ChannelTaskStallReason;
+  level: ChannelTaskHealthLevel;
+  idleMs: number;
+  since: string | null;
+  delivery: ChannelDeliveryReceipt | null;
+}
+
+export interface ChannelHealthInput {
+  channelId: string;
+}
+
+export interface ResendChannelDeliveryInput {
+  deliveryId: string;
+}
+
 export interface ChannelTask {
   id: string;
   channelId: string;
@@ -120,6 +168,9 @@ export interface ChannelTask {
   assignmentCount: number;
   error: string | null;
   seenDependencies?: string[];
+  stallReason?: ChannelTaskStallReason;
+  lastActivityAt?: string | null;
+  health?: ChannelTaskHealth;
 }
 
 export interface ChannelMessage {
@@ -209,6 +260,7 @@ export type ChannelCommand =
       channelId: string;
       taskId: string;
       recipientAgentId: string | null;
+      text?: string;
     }
   | { type: "read"; operationId: string; channelId: string; throughSequence: number };
 
@@ -354,8 +406,61 @@ export function isChannelTask(value: unknown): value is ChannelTask {
     sequence(value.revision) &&
     sequence(value.assignmentCount) &&
     (value.error === null || isBoundedString(value.error, INPUT_LIMITS.messageText)) &&
-    (value.seenDependencies === undefined || identifiers(value.seenDependencies))
+    (value.seenDependencies === undefined || identifiers(value.seenDependencies)) &&
+    (value.stallReason === undefined || isOneOf(CHANNEL_TASK_STALL_REASONS, value.stallReason)) &&
+    (value.lastActivityAt === undefined || value.lastActivityAt === null || isString(value.lastActivityAt)) &&
+    (value.health === undefined || isChannelTaskHealth(value.health))
   );
+}
+
+function isChannelTaskHealth(value: unknown): value is ChannelTaskHealth {
+  return (
+    isDynamicRecord(value) &&
+    isIdentifier(value.taskId) &&
+    isOneOf(CHANNEL_TASK_STALL_REASONS, value.stallReason) &&
+    isOneOf(CHANNEL_TASK_HEALTH_LEVELS, value.level) &&
+    isNumber(value.idleMs) &&
+    Number.isFinite(value.idleMs) &&
+    value.idleMs >= 0 &&
+    (value.since === null || isString(value.since)) &&
+    (value.delivery === null || isChannelDeliveryReceipt(value.delivery))
+  );
+}
+
+function isChannelDeliveryReceipt(value: unknown): value is ChannelDeliveryReceipt {
+  return (
+    isDynamicRecord(value) &&
+    isIdentifier(value.deliveryId) &&
+    isIdentifier(value.taskId) &&
+    isIdentifier(value.agentId) &&
+    isOneOf(CHANNEL_DELIVERY_STATUSES, value.status) &&
+    (value.at === null || isString(value.at)) &&
+    (value.error === null || isString(value.error)) &&
+    typeof value.resendable === "boolean"
+  );
+}
+
+export function parseChannelHealthInput(value: unknown): ChannelHealthInput {
+  if (!isDynamicRecord(value) || !isIdentifier(value.channelId)) throw new Error("Provide a valid channel.");
+  return { channelId: value.channelId };
+}
+
+export function parseResendChannelDeliveryInput(value: unknown): ResendChannelDeliveryInput {
+  if (!isDynamicRecord(value) || !isIdentifier(value.deliveryId)) throw new Error("Provide a valid delivery.");
+  return { deliveryId: value.deliveryId };
+}
+
+export function decodeChannelTaskHealthList(value: unknown): ChannelTaskHealth[] {
+  if (!Array.isArray(value) || value.length > INPUT_LIMITS.agents * 64) throw new Error("Invalid task health.");
+  return value.map((entry) => {
+    if (!isChannelTaskHealth(entry)) throw new Error("Invalid task health.");
+    return entry;
+  });
+}
+
+export function decodeChannelDeliveryReceipt(value: unknown): ChannelDeliveryReceipt {
+  if (!isChannelDeliveryReceipt(value)) throw new Error("Invalid delivery receipt.");
+  return value;
 }
 
 export function isChannelMessage(value: unknown): value is ChannelMessage {
@@ -492,9 +597,16 @@ export function parseChannelCommand(value: unknown): ChannelCommand {
   if (
     (value.type === "stop" || value.type === "resume" || value.type === "reassign" || value.type === "cancel") &&
     isIdentifier(value.taskId) &&
-    (value.recipientAgentId === null || isIdentifier(value.recipientAgentId))
+    (value.recipientAgentId === null || isIdentifier(value.recipientAgentId)) &&
+    (value.text === undefined || value.text === null || isBoundedString(value.text, INPUT_LIMITS.messageText))
   ) {
-    return { ...common, type: value.type, taskId: value.taskId, recipientAgentId: value.recipientAgentId };
+    return {
+      ...common,
+      type: value.type,
+      taskId: value.taskId,
+      recipientAgentId: value.recipientAgentId,
+      ...(value.text ? { text: value.text } : {}),
+    };
   }
   if (
     value.type === "send" &&

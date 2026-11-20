@@ -267,10 +267,14 @@ import type {
 import type {
   Channel,
   ChannelCommand,
+  ChannelDeliveryReceipt,
+  ChannelHealthInput,
   ChannelPage,
   ChannelReadInput,
   ChannelSummary,
+  ChannelTaskHealth,
   DeleteChannelMessageInput,
+  ResendChannelDeliveryInput,
   SetChannelImageInput,
 } from "./ipc-chat-channels";
 import type { ClaudeCompactWindowSetting } from "./ipc-claude-compact-window";
@@ -1483,6 +1487,10 @@ export const IPC_ENDPOINTS = {
     clearChannelContext: scopedRequest<string, void>()("agent:channels:clear-context"),
     deleteChannelHistory: scopedRequest<string, void>()("agent:channels:delete-history"),
     compactChannelContext: scopedRequest<string, void>()("agent:channels:compact-context"),
+    channelTaskHealth: scopedRequest<ChannelHealthInput, ChannelTaskHealth[]>()("agent:channels:task-health"),
+    resendChannelDelivery: scopedRequest<ResendChannelDeliveryInput, ChannelDeliveryReceipt>()(
+      "agent:channels:resend-delivery",
+    ),
     getSidebarLayout: scopedQuery<SidebarLayoutSnapshot>()("agent:get-sidebar-layout"),
     mutateSidebarLayout: scopedRequest<SidebarLayoutAction, SidebarLayoutSnapshot>()("agent:mutate-sidebar-layout"),
     getSidebarPins: scopedQuery<SidebarPinsSnapshot>()("agent:sidebar-pins:get"),

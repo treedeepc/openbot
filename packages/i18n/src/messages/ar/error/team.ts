@@ -67,6 +67,7 @@ export const messages = {
   "error.team.channelDeleteUnsupported": "حذف القنوات غير مدعوم في هذا الاتصال.",
   "error.team.historyDeleteUnsupported": "حذف السجل غير مدعوم في هذا الاتصال.",
   "error.team.channelTaskCancelUnsupported": "إلغاء مهام القنوات غير مدعوم في هذا الاتصال.",
+  "error.team.channelTaskHealthUnsupported": "لا تدعم هذه الاتصال حالة المهام واستعادتها.",
   "error.team.membersCannotDeleteChannels": "لا يمكن للأعضاء حذف القنوات.",
   "error.team.membersCannotDeleteChannelHistory": "لا يمكن للأعضاء حذف سجل القناة.",
   "error.team.membersCannotArchiveChannels": "لا يمكن للأعضاء أرشفة القنوات.",

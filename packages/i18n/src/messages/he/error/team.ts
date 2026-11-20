@@ -66,6 +66,7 @@ export const messages = {
   "error.team.channelDeleteUnsupported": "מחיקת ערוצים אינה נתמכת בחיבור הזה.",
   "error.team.historyDeleteUnsupported": "מחיקת היסטוריה אינה נתמכת בחיבור הזה.",
   "error.team.channelTaskCancelUnsupported": "ביטול משימות ערוץ אינו נתמך בחיבור הזה.",
+  "error.team.channelTaskHealthUnsupported": "החיבור הזה לא תומך בסטטוס ובשחזור של משימות.",
   "error.team.membersCannotDeleteChannels": "חברים אינם יכולים למחוק ערוצים.",
   "error.team.membersCannotDeleteChannelHistory": "חברים אינם יכולים למחוק את היסטוריית הערוץ.",
   "error.team.membersCannotArchiveChannels": "חברים אינם יכולים להעביר ערוצים לארכיון.",

@@ -72,6 +72,7 @@ export const messages = {
     "La suppression de l’historique n’est pas prise en charge par cette connexion.",
   "error.team.channelTaskCancelUnsupported":
     "L’annulation des tâches de canal n’est pas prise en charge par cette connexion.",
+  "error.team.channelTaskHealthUnsupported": "Cette connexion ne prend pas en charge l'état et la reprise des tâches.",
   "error.team.membersCannotDeleteChannels": "Les membres ne peuvent pas supprimer de canaux.",
   "error.team.membersCannotDeleteChannelHistory": "Les membres ne peuvent pas supprimer l’historique du canal.",
   "error.team.membersCannotArchiveChannels": "Les membres ne peuvent pas archiver de canaux.",

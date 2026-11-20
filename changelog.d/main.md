@@ -10,6 +10,11 @@
   moves to the next menu module in the left rail. Use Ctrl instead of Cmd on Windows and Linux. Both
   are listed in Settings, where you can give each one your own keys, turn it off, or put the default
   back.
+- A task in a channel chat now says what it is waiting for and how long it has gone without progress.
+  A task that no member picked up, and a turn a provider stopped for making no progress, both show up
+  as stuck instead of leaving only one message in the chat. You can carry on with a new requirement,
+  hand the work to another member, or drop it, and a message that never reached its assistant can be
+  sent again.
 
 ### Changed
 

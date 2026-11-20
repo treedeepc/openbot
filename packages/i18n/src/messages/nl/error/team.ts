@@ -69,6 +69,7 @@ export const messages = {
   "error.team.channelDeleteUnsupported": "Deze verbinding ondersteunt het verwijderen van kanalen niet.",
   "error.team.historyDeleteUnsupported": "Deze verbinding ondersteunt het wissen van de geschiedenis niet.",
   "error.team.channelTaskCancelUnsupported": "Deze verbinding ondersteunt het annuleren van kanaaltaken niet.",
+  "error.team.channelTaskHealthUnsupported": "Deze verbinding ondersteunt de status en het herstel van taken niet.",
   "error.team.membersCannotDeleteChannels": "Leden kunnen geen kanalen verwijderen.",
   "error.team.membersCannotDeleteChannelHistory": "Leden kunnen de kanaalgeschiedenis niet verwijderen.",
   "error.team.membersCannotArchiveChannels": "Leden kunnen geen kanalen archiveren.",

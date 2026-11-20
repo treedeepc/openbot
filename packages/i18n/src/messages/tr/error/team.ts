@@ -66,6 +66,7 @@ export const messages = {
   "error.team.channelDeleteUnsupported": "Kanal silme bu bağlantı tarafından desteklenmiyor.",
   "error.team.historyDeleteUnsupported": "Geçmiş silme bu bağlantı tarafından desteklenmiyor.",
   "error.team.channelTaskCancelUnsupported": "Kanal görevlerini iptal etme bu bağlantı tarafından desteklenmiyor.",
+  "error.team.channelTaskHealthUnsupported": "Bu bağlantı görev durumunu ve kurtarmayı desteklemez.",
   "error.team.membersCannotDeleteChannels": "Üyeler kanalları silemez.",
   "error.team.membersCannotDeleteChannelHistory": "Üyeler kanal geçmişini silemez.",
   "error.team.membersCannotArchiveChannels": "Üyeler kanalları arşivleyemez.",

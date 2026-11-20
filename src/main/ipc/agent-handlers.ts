@@ -23,10 +23,12 @@ import {
   parseAgentAnalyticsInput,
   parseAskSideQuestion,
   parseChannelCommand,
+  parseChannelHealthInput,
   parseChannelRead,
   parseGenerateAgentProfile,
   parseHostAnalyticsInput,
   parseLocalBrowserSecretResponse,
+  parseResendChannelDeliveryInput,
   parseResetAgentSessionSetting,
   parseSaveAgentProfile,
   parseSaveSkillSuggestion,
@@ -647,6 +649,18 @@ export function agentIpcHandlers({
           return runCauseEffect(
             remoteServers.request(serverId, CHANNEL_ROUTES.command, decodeChannel, { method: "POST", body: input }),
           );
+        },
+      }),
+      channelTaskHealth: scopedHandler(parseChannelHealthInput, {
+        local: (input) => service.channels.taskHealth(input.channelId),
+        remote: () => {
+          throw new Error(sourceText("error.team.channelTaskHealthUnsupported"));
+        },
+      }),
+      resendChannelDelivery: scopedHandler(parseResendChannelDeliveryInput, {
+        local: (input) => runCauseEffect(service.channels.resendDelivery(input.deliveryId)),
+        remote: () => {
+          throw new Error(sourceText("error.team.channelTaskHealthUnsupported"));
         },
       }),
       deleteChannel: scopedHandler(parseChannelId, {

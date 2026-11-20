@@ -1439,6 +1439,8 @@ export class AgentService extends EventEmitter<AgentServiceEvents> {
       },
       reportsCompactions: (agentId) => this.#reportsCompactions(agentId),
       quietTurn: (turnId) => this.#turn.quietChannelTurn(turnId),
+      agentActivityAt: (agentId) => this.#turn.lastEventAt(agentId),
+      turnCause: (turnId) => this.#turn.turnCause(turnId),
       provisionalAnswers: (agentId) => {
         const agent = this.#store.get(agentId);
         return (agent ? this.#providers.clientForAgent(agent)?.provisionalAnswers : undefined) === true;

@@ -506,6 +506,10 @@ export class TurnLifecycle {
     return this.#lastEventAt.get(agentId) ?? null;
   }
 
+  turnCause(turnId: string): CauseCode | undefined {
+    return this.#turnCauses.get(turnId);
+  }
+
   trackItem(itemId: string, turnId: string): void {
     this.#itemTurns.set(itemId, turnId);
   }

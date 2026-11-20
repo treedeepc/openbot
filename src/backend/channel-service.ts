@@ -12,14 +12,19 @@ import {
   CHANNEL_ASSIGNMENT_LIMIT_ERROR,
   CHANNEL_CHANGE_ITEM_TYPE,
   CHANNEL_PARALLEL_LIMIT,
+  CHANNEL_TASK_HEALTH_THRESHOLDS,
   type Channel,
   type ChannelCommand,
+  type ChannelDeliveryReceipt,
+  type ChannelDeliveryStatus,
   type ChannelDraft,
   type ChannelMemory,
   type ChannelMessage,
   type ChannelPage,
   type ChannelRoutingConversationEventAction,
   type ChannelTask,
+  type ChannelTaskHealth,
+  type ChannelTaskStallReason,
   type ChannelTaskWait,
   CONTEXT_RESET_ITEM_TYPE,
   type ConversationSnapshot,
@@ -103,6 +108,8 @@ export interface ChannelHooks {
     text: string,
   ): Effect.Effect<"accepted" | "rejected" | "uncertain", ChannelOperationError>;
   releaseQuestions?(agentId: string, threadId: string, turnId: string): void;
+  agentActivityAt?(agentId: string): number | null;
+  turnCause?(turnId: string): string | undefined;
   changed(channelId: string, revision: number, messagesOnly?: boolean): void;
   queueHoldChanged?(): void;
   memoriesChanged?(channelId: string): void;
@@ -956,6 +963,11 @@ export class ChannelService {
         assignmentCount: command.type !== "stop" ? 0 : task.assignmentCount,
         ownerAgentId:
           command.type === "reassign" && task.id === selected.id ? command.recipientAgentId : task.ownerAgentId,
+        stallReason: "none" satisfies ChannelTaskStallReason,
+        lastActivityAt: new Date().toISOString(),
+        ...(command.type === "resume" && task.id === selected.id && command.text?.trim()
+          ? { instruction: `${task.instruction}\n\n${command.text.trim()}`.slice(0, INPUT_LIMITS.messageText) }
+          : {}),
       }),
     );
     const result = yield* channelSync(() => this.store.update(channel, { tasks: updated }, operationId));
@@ -1591,7 +1603,18 @@ export class ChannelService {
           this.#tryTasks.delete(task.id);
           yield* channelSync(() =>
             this.store.update(channel, {
-              tasks: [{ ...task, state: "paused", error: detail }],
+              tasks: [
+                {
+                  ...task,
+                  state: "paused",
+                  error: detail,
+                  stallReason:
+                    detail === sourceText("error.backend.channelRequestMemberRequired")
+                      ? "member-required"
+                      : "undelivered",
+                  lastActivityAt: new Date().toISOString(),
+                },
+              ],
               messages: [
                 this.message(
                   channelId,
@@ -1798,6 +1821,8 @@ export class ChannelService {
                     ...consumed,
                     state: "failed",
                     error: "Could not queue this assignment. Resume to try again.",
+                    stallReason: "undelivered" satisfies ChannelTaskStallReason,
+                    lastActivityAt: new Date().toISOString(),
                   },
                   ...releasedParent(tasks, latest, "failed"),
                 ]
@@ -1860,10 +1885,128 @@ export class ChannelService {
     };
   }
 
+  taskHealth(channelId: string): ChannelTaskHealth[] {
+    return this.store.tasks(channelId).map((task) => this.#taskHealth(task));
+  }
+
+  #deliveryReceipt(task: ChannelTask, assignment: ChannelAssignment): ChannelDeliveryReceipt {
+    const deliveryId = assignment.deliveryId ?? "";
+    const context = assignment.deliveryId ? this.mailbox.getDelivery(assignment.deliveryId) : null;
+    const delivery = context?.delivery;
+    const state: ChannelDeliveryStatus =
+      assignment.state === "failed" || delivery?.status === "failed"
+        ? "failed"
+        : assignment.state === "interrupted" || delivery?.status === "interrupted"
+          ? "interrupted"
+          : assignment.state === "running" || delivery?.status === "running"
+            ? "running"
+            : assignment.state === "completed" || delivery?.status === "completed"
+              ? "delivered"
+              : "queued";
+    return {
+      deliveryId,
+      taskId: task.id,
+      agentId: assignment.agentId,
+      status: state,
+      at: delivery?.createdAt ?? null,
+      error: delivery?.error ?? null,
+      resendable: state === "failed" || state === "interrupted" || state === "queued",
+    };
+  }
+
+  #taskHealth(task: ChannelTask): ChannelTaskHealth {
+    const assignments = this.store.assignments(task.channelId).filter((item) => item.taskId === task.id);
+    const latest = assignments.at(-1);
+    const delivery = latest?.deliveryId ? this.#deliveryReceipt(task, latest) : null;
+    const cause = latest?.turnId ? (this.hooks.turnCause?.(latest.turnId) ?? null) : null;
+    const active = latest ? activeAssignment(latest) : false;
+    const runningSince =
+      active && this.hooks.agentActivityAt ? (this.hooks.agentActivityAt(latest?.agentId ?? "") ?? null) : null;
+    const recorded = Date.parse(task.lastActivityAt ?? "");
+    const fallback = delivery?.at ? Date.parse(delivery.at) : Number.NaN;
+    const activity = Number.isFinite(recorded) ? recorded : Number.isFinite(fallback) ? fallback : Date.now();
+    const lastActivityAt = runningSince === null ? activity : Math.max(activity, runningSince);
+    const idleMs = Math.max(0, Date.now() - lastActivityAt);
+    const stallReason: ChannelTaskStallReason =
+      task.stallReason && task.stallReason !== "none"
+        ? task.stallReason
+        : cause === "stalled"
+          ? "stalled"
+          : task.state === "waiting"
+            ? "awaiting-reply"
+            : delivery && (delivery.status === "failed" || delivery.status === "interrupted")
+              ? "undelivered"
+              : task.state === "queued" && !active && idleMs >= CHANNEL_TASK_HEALTH_THRESHOLDS.slowMs
+                ? "agent-busy"
+                : "none";
+    const level: ChannelTaskHealth["level"] =
+      task.state === "completed" || task.state === "cancelled"
+        ? "none"
+        : idleMs >= CHANNEL_TASK_HEALTH_THRESHOLDS.stuckMs
+          ? "stuck"
+          : idleMs >= CHANNEL_TASK_HEALTH_THRESHOLDS.slowMs
+            ? "slow"
+            : "none";
+    return {
+      taskId: task.id,
+      stallReason,
+      level,
+      idleMs,
+      since: Number.isFinite(lastActivityAt) ? new Date(lastActivityAt).toISOString() : null,
+      delivery,
+    };
+  }
+
+  readonly resendDelivery = Effect.fn("ChannelService.resendDelivery")(function* (
+    this: ChannelService,
+    deliveryId: string,
+  ): Effect.fn.Return<ChannelDeliveryReceipt, ChannelOperationError> {
+    const assignment = yield* channelSync(() => this.store.assignmentForDelivery(deliveryId));
+    if (!assignment) return yield* channelFailure(new Error(sourceText("error.backend.channelTaskNotFound")));
+    const tasks = yield* channelSync(() => this.store.tasks(assignment.channelId));
+    const task = tasks.find((item) => item.id === assignment.taskId);
+    if (!task) return yield* channelFailure(new Error(sourceText("error.backend.channelTaskNotFound")));
+    if (task.state === "running" || task.state === "completed" || task.state === "cancelled")
+      return yield* channelFailure(new Error(sourceText("error.backend.channelTaskComplete")));
+    const now = new Date().toISOString();
+    yield* channelSync(() =>
+      this.store.update(this.store.get(assignment.channelId), {
+        tasks: [
+          {
+            ...task,
+            state: "queued",
+            error: null,
+            revision: task.revision + 1,
+            assignmentCount: 0,
+            stallReason: "none",
+            lastActivityAt: now,
+          },
+        ],
+      }),
+    );
+    this.publish(assignment.channelId);
+    yield* this.wake(assignment.channelId);
+    const resent: ChannelDeliveryReceipt = {
+      deliveryId,
+      taskId: task.id,
+      agentId: assignment.agentId,
+      status: "queued",
+      at: now,
+      error: null,
+      resendable: true,
+    };
+    return resent;
+  }).bind(this);
+
   page(channelId: string, before?: number): ChannelPage {
     const stored = this.store.page(channelId, before);
     if (before !== undefined) return stored;
-    const page = { ...stored, tasks: this.store.withSeenDependencies(channelId, stored.tasks) };
+    const page = {
+      ...stored,
+      tasks: this.store
+        .withSeenDependencies(channelId, stored.tasks)
+        .map((task) => ({ ...task, health: this.#taskHealth(task) })),
+    };
     const waits = this.taskWaits(channelId, page.tasks);
     return waits.length ? { ...page, waits } : page;
   }
@@ -1902,7 +2045,11 @@ export class ChannelService {
     });
   }
 
-  deliveryFailed(deliveryId: string, reason: string): Effect.Effect<void, ChannelOperationError> {
+  deliveryFailed(
+    deliveryId: string,
+    reason: string,
+    cause: ChannelTaskStallReason = "undelivered",
+  ): Effect.Effect<void, ChannelOperationError> {
     return Effect.gen({ self: this }, function* () {
       this.#deltas.delete(deliveryId);
       this.#preparedChanges.delete(deliveryId);
@@ -1917,7 +2064,16 @@ export class ChannelService {
           assignments: [{ ...assignment, state: "failed" }],
           tasks:
             task?.revision === assignment.taskRevision
-              ? [{ ...task, state: "failed", error: reason }, ...releasedParent(tasks, task, "failed")]
+              ? [
+                  {
+                    ...task,
+                    state: "failed",
+                    error: reason,
+                    stallReason: cause,
+                    lastActivityAt: new Date().toISOString(),
+                  },
+                  ...releasedParent(tasks, task, "failed"),
+                ]
               : [],
         }),
       );

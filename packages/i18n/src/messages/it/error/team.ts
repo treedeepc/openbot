@@ -73,6 +73,7 @@ export const messages = {
   "error.team.historyDeleteUnsupported": "L'eliminazione della cronologia non è supportata da questa connessione.",
   "error.team.channelTaskCancelUnsupported":
     "L'annullamento delle attività dei canali non è supportato da questa connessione.",
+  "error.team.channelTaskHealthUnsupported": "Questa connessione non supporta lo stato e il ripristino delle attività.",
   "error.team.membersCannotDeleteChannels": "I membri non possono eliminare i canali.",
   "error.team.membersCannotDeleteChannelHistory": "I membri non possono eliminare la cronologia del canale.",
   "error.team.membersCannotArchiveChannels": "I membri non possono archiviare i canali.",
