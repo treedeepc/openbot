@@ -555,9 +555,11 @@ import type {
   UninstallSkillInput,
 } from "./ipc-skills";
 import type {
+  ChooseLibraryImportInput,
   ClearStorageInput,
   DeleteStoredFileInput,
   GetStorageUsageInput,
+  LibraryImportResult,
   OpenStorageLocationInput,
   OpenStoredFileInput,
   ProviderRuntimeDownload,
@@ -1898,6 +1900,7 @@ export const IPC_ENDPOINTS = {
     changeLibraryFolders: scopedRequest<LibraryFolderAction, LibraryFoldersSnapshot, "required">()(
       "storage:change-library-folders",
     ),
+    chooseImport: scopedRequest<ChooseLibraryImportInput, LibraryImportResult, "required">()("storage:choose-import"),
     getRemovableRuntimes: request<undefined, RemovableRuntimes>()("storage:get-removable-runtimes"),
     removeRemovableRuntimes: request<undefined, RemovableRuntimes>()("storage:remove-removable-runtimes"),
   },

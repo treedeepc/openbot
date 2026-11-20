@@ -1,10 +1,12 @@
 import {
   assertStorageUsageScope,
+  type ChooseLibraryImportInput,
   decodeChannelStorageUsage,
   decodeLibraryFoldersSnapshot,
   decodeMachineMetrics,
   decodeStorageDisk,
   decodeStorageUsage,
+  parseChooseLibraryImportInput,
   parseClearStorageInput,
   parseDeleteStoredFileInput,
   parseGetStorageUsageInput,
@@ -35,9 +37,11 @@ import {
 import { STORAGE_ROUTES } from "@openbot/contracts/team-protocol/storage-v1";
 import { sourceText } from "@openbot/i18n/source";
 import type { Effect } from "effect";
+import { dialog, type OpenDialogOptions } from "electron";
 import { runCauseEffect } from "../../backend/effect-boundary";
 import type { StorageAgent, StorageUsageService } from "../../backend/storage-usage";
 import type { LibraryFoldersService } from "../library-folders-service";
+import type { LibraryImportService } from "../library-import-service";
 import type { MachineAlertMonitor } from "../machine-alerts";
 import type { ProviderRuntimeManager } from "../provider-runtime-manager";
 import type { ResponseDecoder } from "../remote-host-decoding";
@@ -60,8 +64,9 @@ interface StorageRemoteServers extends Pick<OpenAttachmentDependencies["remoteSe
 }
 
 export interface StorageIpcDependencies extends Omit<OpenAttachmentDependencies, "remoteServers"> {
-  storage: Pick<StorageUsageService, "usage" | "deleteFile" | "clear" | "disk">;
+  storage: Pick<StorageUsageService, "usage" | "deleteFile" | "clear" | "disk" | "invalidate">;
   libraryFolders: Pick<LibraryFoldersService, "snapshot" | "change" | "removeFiles">;
+  libraryImport: Pick<LibraryImportService, "importFiles">;
   machine: Pick<MachineAlertMonitor, "metrics">;
   providerRuntimes: Pick<ProviderRuntimeManager, "removableRuntimes" | "removeRemovableRuntimes">;
   remoteServers: StorageRemoteServers;
@@ -78,6 +83,7 @@ function decodeStorageChange(value: unknown): undefined {
 export function storageIpcHandlers({
   storage,
   libraryFolders,
+  libraryImport,
   machine,
   providerRuntimes,
   mailbox,
@@ -87,6 +93,15 @@ export function storageIpcHandlers({
   agents,
   openPath,
 }: StorageIpcDependencies): Pick<IpcGroupHandlers, "storage"> {
+  async function chooseImportPaths(kind: ChooseLibraryImportInput["kind"]): Promise<string[]> {
+    const mainWindow = getMainWindow();
+    const options: OpenDialogOptions = {
+      title: translate(kind === "directory" ? "dialog.chooseLibraryFolder" : "dialog.chooseLibraryFiles"),
+      properties: kind === "directory" ? ["openDirectory"] : ["openFile", "multiSelections"],
+    };
+    const result = mainWindow ? await dialog.showOpenDialog(mainWindow, options) : await dialog.showOpenDialog(options);
+    return result.canceled ? [] : result.filePaths;
+  }
   async function remoteChange(serverId: string, path: string, body: unknown): Promise<void> {
     if (!remoteServers.supportsCapability(serverId, STORAGE_CAPABILITY))
       throw new Error(sourceText("error.storage.unsupported"));
@@ -191,6 +206,18 @@ export function storageIpcHandlers({
               body: action,
             }),
           );
+        },
+      }),
+      chooseImport: scopedHandler(parseChooseLibraryImportInput, {
+        local: async (parsed) => {
+          const paths = await chooseImportPaths(parsed.kind);
+          if (paths.length === 0) return { imported: 0, skipped: [] };
+          const result = await runCauseEffect(libraryImport.importFiles({ ...parsed, paths }));
+          storage.invalidate();
+          return result;
+        },
+        remote: () => {
+          throw new Error(sourceText("error.storage.unsupported"));
         },
       }),
       openLocation: payloadHandler(parseOpenStorageLocationInput, async ({ agentId }) => {

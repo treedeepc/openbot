@@ -331,6 +331,7 @@ export const messages = {
   "error.backend.libraryFolderGone": "Klasör yok veya zaten silinmiş.",
   "error.backend.libraryFolderOtherAgent": "Bir dosya yalnızca kendi ajanının klasörüne konabilir.",
   "error.backend.libraryFolderMoveInvalid": "Bu klasör oraya taşınamaz.",
+  "error.backend.libraryImportHidden": "Gizli öğeler içe aktarılmaz.",
   "error.backend.sectionNameDuplicate": "Bölüm adları benzersiz olmalıdır.",
   "error.backend.directMessageRequired": "Önce bir mesaj yazın.",
   "error.backend.directMessageTooLong": "Doğrudan mesaj en fazla {limit} karakter içerebilir.",

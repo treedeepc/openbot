@@ -45,6 +45,7 @@ export interface StoredAttachment extends AttachmentSummary {
 export interface StoredGeneratedAttachment extends StoredAttachment {
   ownerAgentId?: string;
   ownerThreadId?: string | null;
+  importedAt?: string;
 }
 
 export interface StoredDraft extends StoredAttachment {
@@ -63,6 +64,7 @@ interface TransferManifest {
   recipientAgentIds?: string[];
   ownerAgentId?: string;
   ownerThreadId?: string | null;
+  importedAt?: string;
   createdAt: string;
   attachments: Array<{
     id: string;
@@ -475,6 +477,7 @@ export class AttachmentFiles {
       mimeType?: string;
       ownerAgentId?: string;
       ownerThreadId?: string | null;
+      importedAt?: string;
     },
   ): Effect.fn.Return<StoredGeneratedAttachment, AttachmentOperationError> {
     if ((input.sourcePath === undefined) === (input.bytes === undefined)) {
@@ -518,6 +521,7 @@ export class AttachmentFiles {
           ),
           ...(input.ownerAgentId ? { ownerAgentId: input.ownerAgentId } : {}),
           ...(input.ownerThreadId !== undefined ? { ownerThreadId: input.ownerThreadId } : {}),
+          ...(input.importedAt ? { importedAt: input.importedAt } : {}),
         };
         yield* writeGeneratedManifestEffect(generatedAttachment);
         completed = true;
@@ -599,6 +603,7 @@ const writeGeneratedManifestEffect = Effect.fn("Attachments.writeGeneratedManife
     generatedAttachmentId: attachment.id,
     ...(attachment.ownerAgentId ? { ownerAgentId: attachment.ownerAgentId } : {}),
     ...(attachment.ownerThreadId !== undefined ? { ownerThreadId: attachment.ownerThreadId } : {}),
+    ...(attachment.importedAt ? { importedAt: attachment.importedAt } : {}),
     createdAt: new Date().toISOString(),
     attachments: [manifestAttachment(attachment)],
   });

@@ -336,6 +336,7 @@ export const messages = {
   "error.backend.libraryFolderGone": "Папка не существует или уже удалена.",
   "error.backend.libraryFolderOtherAgent": "Файл можно поместить только в папку его агента.",
   "error.backend.libraryFolderMoveInvalid": "Эту папку нельзя туда переместить.",
+  "error.backend.libraryImportHidden": "Скрытые элементы не импортируются.",
   "error.backend.sectionNameDuplicate": "Названия разделов должны быть уникальными.",
   "error.backend.directMessageRequired": "Сначала напишите сообщение.",
   "error.backend.directMessageTooLong": "Личное сообщение может содержать не более {limit} символов.",

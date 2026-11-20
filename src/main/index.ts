@@ -127,6 +127,7 @@ import { vaultIpcHandlers } from "./ipc/vault-handlers";
 import { voiceIpcHandlers } from "./ipc/voice-handlers";
 import { workflowIpcHandlers } from "./ipc/workflow-handlers";
 import { KeepAwake } from "./keep-awake";
+import { LibraryImportService } from "./library-import-service";
 import { stopAppImageCrashpadHandlerAtExit } from "./linux-appimage-crashpad";
 import { relaunchApp } from "./linux-appimage-relaunch";
 import { installLinuxDesktopEntry } from "./linux-desktop-entry";
@@ -1048,6 +1049,11 @@ function registerIpcHandlers({
     ...storageIpcHandlers({
       storage: storageUsage,
       libraryFolders: libraryFoldersService,
+      libraryImport: new LibraryImportService({
+        mailbox,
+        libraryFolders: libraryFoldersService,
+        agents: () => service.listAgents(),
+      }),
       machine: machineAlerts,
       providerRuntimes,
       mailbox,

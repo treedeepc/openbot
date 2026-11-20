@@ -347,6 +347,7 @@ export const messages = {
   "error.backend.libraryFolderGone": "La carpeta no existe o ya se eliminó.",
   "error.backend.libraryFolderOtherAgent": "Un archivo solo puede ir a una carpeta de su agente.",
   "error.backend.libraryFolderMoveInvalid": "Esta carpeta no se puede mover ahí.",
+  "error.backend.libraryImportHidden": "Los elementos ocultos no se importan.",
   "error.backend.sectionNameDuplicate": "Los nombres de las secciones deben ser únicos.",
   "error.backend.directMessageRequired": "Escribe un mensaje primero.",
   "error.backend.directMessageTooLong": "Un mensaje directo puede tener hasta {limit} caracteres.",

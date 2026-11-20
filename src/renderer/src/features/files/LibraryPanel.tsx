@@ -16,6 +16,9 @@ export function LibraryPanel(props: { serverId: string }) {
       levels={desktopAgentLevels}
       onShowInChat={navigation.selectGlobalSearchMessage}
       onOpenUrl={(url) => void appPort().openUrl(url)}
+      onImport={(input) =>
+        filesPort().storage.chooseImport?.(input, props.serverId) ?? Promise.resolve({ imported: 0, skipped: [] })
+      }
     />
   );
 }

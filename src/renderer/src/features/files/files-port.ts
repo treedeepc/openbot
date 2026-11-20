@@ -12,6 +12,7 @@ export interface FilesPort {
         | "getDisk"
         | "getLibraryFolders"
         | "changeLibraryFolders"
+        | "chooseImport"
       >
     >;
   hostAdmin?: Pick<OpenBotDesktopApi["hostAdmin"], "getMachineAlerts" | "setMachineAlerts">;

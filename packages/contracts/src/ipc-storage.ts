@@ -21,7 +21,7 @@ export type StorageCategory = (typeof STORAGE_CATEGORIES)[number];
 export const CLEARABLE_STORAGE_CATEGORIES = ["caches", "logs"] as const;
 export type ClearableStorageCategory = (typeof CLEARABLE_STORAGE_CATEGORIES)[number];
 
-export const STORED_FILE_SOURCES = ["attachment", "generated", "workspace", "download"] as const;
+export const STORED_FILE_SOURCES = ["attachment", "generated", "workspace", "download", "import"] as const;
 export type StoredFileSource = (typeof STORED_FILE_SOURCES)[number];
 
 export const STORED_FILE_STATUSES = ["available", "missing", "remote", "failed"] as const;
@@ -129,6 +129,25 @@ export interface OpenStorageLocationInput {
   agentId: string;
 }
 
+export const LIBRARY_IMPORT_KINDS = ["files", "directory"] as const;
+export type LibraryImportKind = (typeof LIBRARY_IMPORT_KINDS)[number];
+
+export interface ChooseLibraryImportInput {
+  agentId: string;
+  folderId?: string;
+  kind: LibraryImportKind;
+}
+
+export interface LibraryImportSkipped {
+  name: string;
+  reason: string;
+}
+
+export interface LibraryImportResult {
+  imported: number;
+  skipped: LibraryImportSkipped[];
+}
+
 function invalid(label: string): never {
   throw new Error(`Invalid ${label}.`);
 }
@@ -194,6 +213,28 @@ export function parseOpenStoredFileInput(value: unknown): OpenStoredFileInput {
 
 export function parseOpenStorageLocationInput(value: unknown): OpenStorageLocationInput {
   return { agentId: identifier(record(value, "location request").agentId, "agent") };
+}
+
+export function parseChooseLibraryImportInput(value: unknown): ChooseLibraryImportInput {
+  const input = record(value, "library import request");
+  const agentId = identifier(input.agentId, "library import agent");
+  const folderId = optionalIdentifier(input.folderId, "library import folder");
+  if (!isOneOf(LIBRARY_IMPORT_KINDS, input.kind)) invalid("library import kind");
+  return { agentId, ...(folderId === undefined ? {} : { folderId }), kind: input.kind };
+}
+
+export function decodeLibraryImportResult(value: unknown): LibraryImportResult {
+  const result = record(value, "library import result");
+  return {
+    imported: byteCount(result.imported, "library import result"),
+    skipped: list(result.skipped, STORAGE_LIMITS.files, decodeLibraryImportSkipped, "library import result"),
+  };
+}
+
+function decodeLibraryImportSkipped(value: unknown): LibraryImportSkipped {
+  const entry = record(value, "library import skip");
+  if (!isString(entry.name) || !isString(entry.reason)) invalid("library import skip");
+  return { name: entry.name, reason: entry.reason };
 }
 
 export function decodeRemovableRuntimes(value: unknown): RemovableRuntimes {

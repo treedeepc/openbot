@@ -1,8 +1,12 @@
 import {
+  type ChooseLibraryImportInput,
   LIBRARY_FOLDER_LIMITS,
+  LIBRARY_IMPORT_KINDS,
   type LibraryFolder,
   type LibraryFolderAction,
   type LibraryFoldersSnapshot,
+  type LibraryImportKind,
+  type LibraryImportResult,
   libraryFolderBranch,
   libraryFolderPath,
   libraryFolderTree,
@@ -12,14 +16,17 @@ import {
   Ban,
   Button,
   buttonVariants,
+  ConfirmDialog,
   DropdownMenu,
   File,
+  FileInput,
   Folder,
   FolderInput,
   FolderPlus,
   LayoutDashboard,
   LayoutGrid,
   List,
+  TriangleAlert,
   toast,
 } from "@openbot/ui";
 import type { AgentProfile } from "@openbot/ui/data";
@@ -95,6 +102,8 @@ export interface LibraryPageProps {
   onFavoritesChange?: ((keys: readonly string[]) => void) | undefined;
   mediaSource?: AttachmentMediaSource | undefined;
   opensFiles?: boolean | undefined;
+  canImport?: boolean | undefined;
+  onImport?: ((input: ChooseLibraryImportInput) => Promise<LibraryImportResult>) | undefined;
 }
 
 export type BatchFileAction = (files: readonly StoredFileRow[], onProgress: (done: number) => void) => Promise<number>;
@@ -121,7 +130,7 @@ function isPicture(file: StoredFileRow): boolean {
 }
 
 export function LibraryPage(props: LibraryPageProps) {
-  const { t } = useText();
+  const { t, errorMessage, sourceText } = useText();
   const [search, setSearch] = createSignal("");
   const [type, setType] = createSignal<FileTypeFilter>("all");
   const [view, setView] = createSignal<LibraryView>("mosaic");
@@ -449,6 +458,43 @@ export function LibraryPage(props: LibraryPageProps) {
     const next: LibraryLocation = { kind: "agent", agentId };
     go(next);
     newFolder(agentId, undefined, "tile", next);
+  }
+
+  const [importing, setImporting] = createSignal<LibraryImportKind | null>(null);
+  const [importSkipped, setImportSkipped] = createSignal<LibraryImportResult | null>(null);
+
+  const importPlace = () => {
+    const at = place();
+    if (!props.canImport || !props.onImport || selecting()) return null;
+    if (at.kind === "removed") return null;
+    if (at.kind === "agent" || at.kind === "folder") return organizes(at.agentId) ? "here" : null;
+    return organizableAgents().length > 0 ? "pick" : null;
+  };
+
+  async function runImport(kind: LibraryImportKind, agentId: string, folderId: string | undefined): Promise<void> {
+    const onImport = props.onImport;
+    if (!onImport || importing() !== null) return;
+    setImporting(kind);
+    try {
+      const result = await onImport(folderId === undefined ? { agentId, kind } : { agentId, folderId, kind });
+      if (result.skipped.length > 0) {
+        setImportSkipped(result);
+        return;
+      }
+      if (result.imported > 0) toast.success(t("files.library.imported", { count: result.imported }));
+    } catch (caught) {
+      toast.error(t("files.library.importFailed"), {
+        description: errorMessage(caught, t("files.library.importFailed")),
+      });
+    } finally {
+      setImporting(null);
+    }
+  }
+
+  function importHere(kind: LibraryImportKind, agentId: string): void {
+    const at = place();
+    const folderId = at.kind === "folder" && at.agentId === agentId ? at.folderId : undefined;
+    void runImport(kind, agentId, folderId);
   }
 
   function announceFilled(name?: string): void {
@@ -907,6 +953,47 @@ export function LibraryPage(props: LibraryPageProps) {
     </Show>
   );
 
+  const importLabel = (kind: LibraryImportKind) =>
+    kind === "files" ? t("files.library.importFiles") : t("files.library.importFolder");
+  const importIcon = (kind: LibraryImportKind): JSX.Element =>
+    kind === "files" ? <FileInput aria-hidden="true" /> : <FolderInput aria-hidden="true" />;
+
+  const importButtons = () => (
+    <For each={LIBRARY_IMPORT_KINDS}>
+      {(kind) => (
+        <>
+          <Show when={importPlace() === "pick"}>
+            <AgentPicker
+              agents={organizableAgents()}
+              label={t("files.library.importForAgent")}
+              triggerClass={buttonVariants({ variant: "ghost", size: "icon-sm" })}
+              triggerLabel={importLabel(kind)}
+              triggerTitle={importLabel(kind)}
+              onChange={(agentId) => importHere(kind, agentId)}
+            >
+              {importIcon(kind)}
+            </AgentPicker>
+          </Show>
+          <Show when={importPlace() === "here"}>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              aria-label={importLabel(kind)}
+              title={importLabel(kind)}
+              onClick={() => {
+                const at = place();
+                if (at.kind === "agent" || at.kind === "folder") importHere(kind, at.agentId);
+              }}
+            >
+              {importIcon(kind)}
+            </Button>
+          </Show>
+        </>
+      )}
+    </For>
+  );
+
   const moveSubmenu = (file: () => StoredFileRow): JSX.Element => {
     const folders = () => {
       const agentId = file().agentId;
@@ -984,6 +1071,7 @@ export function LibraryPage(props: LibraryPageProps) {
                 value={search()}
                 onChange={setSearch}
               />
+              {importButtons()}
               {selectButtons()}
             </div>
           </header>
@@ -1211,6 +1299,36 @@ export function LibraryPage(props: LibraryPageProps) {
         onClose={() => setPendingDelete(null)}
         onDelete={(file) => props.onAction(file, "delete")}
       />
+      <ConfirmDialog
+        open={importSkipped() !== null}
+        tone="default"
+        hideCancel
+        icon={<TriangleAlert />}
+        onCancel={() => {
+          setImportSkipped(null);
+        }}
+        onConfirm={() => {
+          setImportSkipped(null);
+        }}
+        title={t("files.library.importSkippedTitle")}
+        description={t("files.library.importSkipped", { count: importSkipped()?.skipped.length ?? 0 })}
+        confirmLabel={t("common.done")}
+      >
+        <ul class="storage-rows library-import-skips">
+          <For each={importSkipped()?.skipped ?? []}>
+            {(entry) => (
+              <li class="library-import-skip">
+                <span class="library-import-skip-name" dir="auto">
+                  {entry.name}
+                </span>
+                <span class="library-import-skip-reason" dir="auto">
+                  {sourceText(entry.reason)}
+                </span>
+              </li>
+            )}
+          </For>
+        </ul>
+      </ConfirmDialog>
       <Show when={lightbox()} keyed>
         {(opening) => (
           <ImageLightbox
@@ -1259,6 +1377,7 @@ export function LibraryPage(props: LibraryPageProps) {
               <FolderPlus aria-hidden="true" />
             </AgentPicker>
           </Show>
+          {importButtons()}
           {viewButtons()}
           {selectButtons()}
         </LibraryPathHead>

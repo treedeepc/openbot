@@ -1,3 +1,12 @@
+### Added
+
+- You can now add files and a folder from your computer to an agent's Library. OpenBot copies them
+  into its own storage and keeps the folder structure you pick, so the files on your disk stay
+  untouched and removing them from the Library never removes the originals. When it cannot add
+  something, such as a hidden item or a folder deeper than five levels, it lists that item and why.
+- The Library page offers Add files and Add folder in the desktop app. The web client does not show
+  them, because a browser cannot pick files from your disk.
+
 ### Changed
 
 - The side panel now collapses when you close its last tab. Before, it stayed open and showed the

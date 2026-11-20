@@ -1,4 +1,11 @@
-import { agentAccessRank, canPreviewAttachment, type FilePreview, type ServerSummary } from "@openbot/contracts/ipc";
+import {
+  agentAccessRank,
+  type ChooseLibraryImportInput,
+  canPreviewAttachment,
+  type FilePreview,
+  type LibraryImportResult,
+  type ServerSummary,
+} from "@openbot/contracts/ipc";
 import { AGENT_ACCESS_CAPABILITY } from "@openbot/contracts/team-protocol/agent-access-v1";
 import { classifyFailure } from "@openbot/telemetry";
 import type { AgentProfile } from "@openbot/ui/data";
@@ -42,6 +49,7 @@ export interface ServerLibraryProps {
   onOpenUrl: (url: string) => void;
   mediaSource?: AttachmentMediaSource | undefined;
   opensFiles?: boolean | undefined;
+  onImport?: ((input: ChooseLibraryImportInput) => Promise<LibraryImportResult>) | undefined;
 }
 
 export function ServerLibrary(props: ServerLibraryProps) {
@@ -84,6 +92,17 @@ export function ServerLibrary(props: ServerLibraryProps) {
     const current = props.server;
     return current ? canManageStorage(current) : false;
   };
+  const canImport = () => {
+    const current = props.server;
+    return props.onImport !== undefined && current ? canManageStorage(current) : false;
+  };
+
+  async function chooseImport(input: ChooseLibraryImportInput): Promise<LibraryImportResult> {
+    const result = (await props.onImport?.(input)) ?? { imported: 0, skipped: [] };
+    await storage.refresh(true);
+    folders.reload();
+    return result;
+  }
   const macWindowControls = () => platform.appInfo()?.platform === "darwin";
 
   function saveCollapsedRows(keys: readonly string[]): void {
@@ -141,6 +160,8 @@ export function ServerLibrary(props: ServerLibraryProps) {
             error={storage.error()}
             onRetry={() => void storage.refresh(true)}
             canDelete={canDelete()}
+            canImport={canImport()}
+            onImport={chooseImport}
             macWindowControls={macWindowControls()}
             onOpen={(file, origin) => void open(file, origin)}
             onAction={act}

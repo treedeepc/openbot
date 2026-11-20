@@ -20,4 +20,6 @@ export const messages = {
   "dialog.filter.transfer": "OpenBot 移行ファイル",
   "dialog.chooseExternalLinkApp": "ブラウザーを選択",
   "dialog.filter.applications": "アプリケーション",
+  "dialog.chooseLibraryFiles": "ライブラリに追加するファイルを選択",
+  "dialog.chooseLibraryFolder": "ライブラリに追加するフォルダを選択",
 } as const satisfies PartialTranslation<typeof source>;

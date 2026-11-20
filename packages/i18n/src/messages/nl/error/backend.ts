@@ -345,6 +345,7 @@ export const messages = {
   "error.backend.libraryFolderGone": "De map bestaat niet of is al verwijderd.",
   "error.backend.libraryFolderOtherAgent": "Een bestand kan alleen naar een map van zijn agent.",
   "error.backend.libraryFolderMoveInvalid": "Deze map kan daar niet naartoe worden verplaatst.",
+  "error.backend.libraryImportHidden": "Verborgen items worden niet geïmporteerd.",
   "error.backend.sectionNameDuplicate": "Namen van secties moeten uniek zijn.",
   "error.backend.directMessageRequired": "Schrijf eerst een bericht.",
   "error.backend.directMessageTooLong": "Een direct bericht kan maximaal {limit} tekens hebben.",

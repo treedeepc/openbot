@@ -28,6 +28,7 @@ export interface AgentPickerProps {
   label: string;
   triggerClass: string;
   triggerLabel: string;
+  triggerTitle?: string | undefined;
   count?: ((agentId: string) => number) | undefined;
   children: JSX.Element;
 }
@@ -72,6 +73,7 @@ export function AgentPicker(props: AgentPickerProps) {
         }}
         class={props.triggerClass}
         aria-label={props.triggerLabel}
+        title={props.triggerTitle}
         onKeyDown={(event: KeyboardEvent) => {
           if (event.key !== "ArrowDown" && event.key !== "ArrowUp") return;
           event.preventDefault();

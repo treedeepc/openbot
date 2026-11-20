@@ -210,7 +210,7 @@ interface EnqueueInput {
 export interface MailboxStoredFile {
   attachment: AttachmentSummary;
   path: string;
-  source: "attachment" | "generated";
+  source: "attachment" | "generated" | "import";
   messageId: string | null;
   agentId: string | null;
   createdAt: string | null;
@@ -3156,10 +3156,10 @@ export class MailboxStore {
       files.push({
         attachment: toAttachmentSummary(attachment),
         path: attachment.path,
-        source: "generated",
+        source: attachment.importedAt ? "import" : "generated",
         messageId: null,
         agentId: attachment.ownerAgentId ?? null,
-        createdAt: null,
+        createdAt: attachment.importedAt ?? null,
       });
     }
     return files;
@@ -3349,6 +3349,7 @@ export class MailboxStore {
       mimeType?: string;
       ownerAgentId?: string;
       ownerThreadId?: string | null;
+      importedAt?: string;
     },
   ): Effect.fn.Return<AttachmentSummary, StoredStateFailure> {
     try {
@@ -3784,7 +3785,8 @@ function isStoredGeneratedAttachment(value: unknown): value is StoredGeneratedAt
   if (!isStoredAttachment(value)) return false;
   return (
     (value.ownerAgentId === undefined || isString(value.ownerAgentId)) &&
-    (value.ownerThreadId === undefined || value.ownerThreadId === null || isString(value.ownerThreadId))
+    (value.ownerThreadId === undefined || value.ownerThreadId === null || isString(value.ownerThreadId)) &&
+    (value.importedAt === undefined || isString(value.importedAt))
   );
 }
 

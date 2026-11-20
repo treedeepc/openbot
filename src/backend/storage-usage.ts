@@ -243,7 +243,7 @@ export class StorageUsageScanner {
       breakdown = [
         breakdownRow("workspaces", measured.workspaces),
         breakdownRow("attachments", sum("attachment")),
-        breakdownRow("generated", sum("generated")),
+        breakdownRow("generated", sum("generated") + sum("import")),
         breakdownRow("chats", yield* this.#databaseBytes()),
         breakdownRow("downloads", measured.downloads),
         breakdownRow("caches", measured.caches),
@@ -266,14 +266,14 @@ export class StorageUsageScanner {
       breakdown = [
         breakdownRow("workspaces", workspace.bytes),
         breakdownRow("attachments", sum("attachment")),
-        breakdownRow("generated", sum("generated")),
+        breakdownRow("generated", sum("generated") + sum("import")),
         breakdownRow("chats", chatBytes),
       ];
       agentRows = [this.#agentRow(scopeAgent.id, workspace.bytes, files, threads, threadSizes)];
     } else {
       breakdown = [
         breakdownRow("attachments", sum("attachment")),
-        breakdownRow("generated", sum("generated")),
+        breakdownRow("generated", sum("generated") + sum("import")),
         breakdownRow("chats", chatBytes),
       ];
     }

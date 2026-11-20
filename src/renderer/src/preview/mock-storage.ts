@@ -78,6 +78,7 @@ export function createMockStorage(onFoldersChanged: () => void = () => undefined
       onFoldersChanged();
       return structuredClone(libraryFolders);
     },
+    chooseImport: async () => ({ imported: 0, skipped: [] }),
     getRemovableRuntimes: async () => structuredClone(removableRuntimes),
     removeRemovableRuntimes: async () => {
       const { bytes } = removableRuntimes;

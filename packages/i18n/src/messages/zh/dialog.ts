@@ -23,4 +23,6 @@ export const messages = {
   "dialog.filter.transfer": "OpenBot 传输文件",
   "dialog.chooseExternalLinkApp": "选择浏览器",
   "dialog.filter.applications": "应用程序",
+  "dialog.chooseLibraryFiles": "选择要添加到资料库的文件",
+  "dialog.chooseLibraryFolder": "选择要添加到资料库的文件夹",
 } as const satisfies PartialTranslation<typeof source>;

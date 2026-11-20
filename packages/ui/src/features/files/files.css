@@ -260,6 +260,31 @@
   white-space: nowrap;
 }
 
+.library-import-skips {
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.library-import-skip {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: var(--openbot-space-0-5);
+  padding: var(--openbot-space-2) var(--openbot-space-4);
+}
+
+.library-import-skip-name {
+  overflow-wrap: anywhere;
+  color: var(--openbot-text-primary);
+  font-size: var(--openbot-text-md);
+}
+
+.library-import-skip-reason {
+  overflow-wrap: anywhere;
+  color: var(--openbot-text-muted);
+  font-size: var(--openbot-text-sm);
+}
+
 .storage-row-share {
   width: 96px;
   height: 6px;

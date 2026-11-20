@@ -21,4 +21,6 @@ export const messages = {
   "dialog.filter.transfer": "OpenBot 전송 파일",
   "dialog.chooseExternalLinkApp": "브라우저 선택",
   "dialog.filter.applications": "응용 프로그램",
+  "dialog.chooseLibraryFiles": "라이브러리에 추가할 파일 선택",
+  "dialog.chooseLibraryFolder": "라이브러리에 추가할 폴더 선택",
 } as const satisfies PartialTranslation<typeof source>;
