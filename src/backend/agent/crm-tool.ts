@@ -92,6 +92,9 @@ const changeSchema = z.discriminatedUnion("kind", [
       .min(2)
       .max(CRM_LIMITS.splitParts),
   }),
+  z.strictObject({ kind: z.literal("customer-delete"), customerId: id }),
+  z.strictObject({ kind: z.literal("plan-delete"), planId: id }),
+  z.strictObject({ kind: z.literal("payment-delete"), paymentId: id }),
 ]);
 
 const findSchema = z.strictObject({
@@ -111,7 +114,7 @@ const paymentsSchema = z.strictObject({
 });
 const proposeSchema = z.strictObject({
   change: changeSchema,
-  reason: z.string().trim().min(1).max(CRM_LIMITS.reason).describe("why, for the person who approves"),
+  reason: z.string().trim().min(1).max(CRM_LIMITS.reason).describe("why you are making this change"),
 });
 
 export const CRM_TOOL_DEFINITIONS = [
@@ -135,7 +138,7 @@ export const CRM_TOOL_DEFINITIONS = [
   {
     name: "crm_propose",
     description:
-      "Propose a CRM change: a new or changed customer, tags, a plan, or a payment. A person approves it first. Rows with a source are read-only.",
+      "Apply a CRM change now: create, change or delete a customer, tags, a plan or a payment. It takes effect at once and needs no approval. Rows with a source are read-only.",
     shape: proposeSchema.shape,
   },
 ] as const;
@@ -167,12 +170,7 @@ export const handleCrmTool = Effect.fn("CrmTools.handle")(function* (
       return openBotToolResult(yield* crm.agentPayments(agentId, input));
     }
     const input = yield* toolStep(() => proposeSchema.parse(args));
-    const { proposalId } = yield* crm.agentPropose(agentId, { ...input, threadId });
-    return openBotToolResult({
-      proposalId,
-      status: "pending",
-      next: "An owner or admin approves or rejects it on the CRM page. Do not propose it again.",
-    });
+    return openBotToolResult(yield* crm.agentApply(agentId, { ...input, threadId }));
   });
 
   return yield* operation.pipe(

@@ -4,11 +4,13 @@ import {
   CRM_PRIVATE_FIELDS,
   CRM_TEXT_FIELDS,
   type CrmActivity,
+  type CrmApplyResult,
   type CrmCustomer,
   type CrmEvery,
   type CrmMethod,
   type CrmPrivateField,
   type CrmTextField,
+  isCrmChange,
   isCrmProposedChange,
 } from "@openbot/contracts/ipc";
 import { isNumber, isOneOf, isString } from "@openbot/contracts/runtime-values";
@@ -28,6 +30,7 @@ import {
   decodeCrmCustomer,
   decodeCrmNumberCursor,
   decodeCrmPayment,
+  editable,
   encodeCrmCursor,
   normalizeCrmSearch,
 } from "./crm-store";
@@ -120,13 +123,18 @@ export type CrmAgentChange =
       };
     }
   | { kind: "payment-paid"; paymentIds: string[]; paidAt: string | null }
-  | { kind: "payment-split"; paymentId: string; parts: { amount: string; dueOn: string }[] };
+  | { kind: "payment-split"; paymentId: string; parts: { amount: string; dueOn: string }[] }
+  | { kind: "customer-delete"; customerId: string }
+  | { kind: "plan-delete"; planId: string }
+  | { kind: "payment-delete"; paymentId: string };
 
-export interface CrmAgentProposeInput {
+export interface CrmAgentWriteInput {
   change: CrmAgentChange;
   reason: string;
   threadId: string | null;
 }
+
+export type CrmAgentProposeInput = CrmAgentWriteInput;
 
 type CrmAgentValue = string | number | boolean | null | CrmAgentValue[] | { [key: string]: CrmAgentValue };
 export type CrmAgentRecord = { [key: string]: CrmAgentValue };
@@ -135,7 +143,8 @@ export interface CrmAgentOperations {
   agentFind(agentId: string, input: CrmAgentFindInput): Effect.Effect<CrmAgentRecord, CrmError>;
   agentCustomer(agentId: string, customerId: string): Effect.Effect<CrmAgentRecord, CrmError>;
   agentPayments(agentId: string, input: CrmAgentPaymentsInput): Effect.Effect<CrmAgentRecord, CrmError>;
-  agentPropose(agentId: string, input: CrmAgentProposeInput): Effect.Effect<{ proposalId: string }, CrmError>;
+  agentApply(agentId: string, input: CrmAgentWriteInput): Effect.Effect<CrmApplyResult, CrmError>;
+  agentPropose(agentId: string, input: CrmAgentWriteInput): Effect.Effect<{ proposalId: string }, CrmError>;
 }
 
 const exponents = new Map<string, number>();
@@ -458,6 +467,15 @@ export class CrmAgentView {
     };
   }
 
+  apply(agentId: string, input: CrmAgentWriteInput): CrmApplyResult {
+    this.#allow(agentId);
+    const { change } = this.#proposedChange(input.change);
+    if (!(isCrmChange(change) || isCrmProposedChange(change)) || input.reason.length > CRM_LIMITS.reason)
+      throw crmRefused("error.crm.invalidChange");
+    if (isCrmProposedChange(change) && this.#store.sourceOwns(change)) throw crmRefused("error.crm.sourceOwned");
+    return this.#store.apply(change, { kind: "agent", id: agentId, name: null }, input.reason);
+  }
+
   propose(agentId: string, input: CrmAgentProposeInput): string {
     this.#allow(agentId);
     const { change, customerId } = this.#proposedChange(input.change);
@@ -504,13 +522,13 @@ export class CrmAgentView {
         };
       }
       case "customer-update":
-        store.customerRecord(change.customerId);
+        editable(store.customer(change.customerId));
         return {
           customerId: change.customerId,
           change: { kind: change.kind, customerId: change.customerId, patch: this.#customerFields(change.patch) },
         };
       case "customer-tags":
-        store.customerRecord(change.customerId);
+        editable(store.customer(change.customerId));
         return {
           customerId: change.customerId,
           change: {
@@ -593,6 +611,21 @@ export class CrmAgentView {
             })),
           },
         };
+      }
+      case "customer-delete": {
+        const customer = store.customer(change.customerId);
+        editable(customer);
+        return { customerId: customer.id, change: { kind: change.kind, customerId: customer.id } };
+      }
+      case "plan-delete": {
+        const plan = store.plan(change.planId);
+        editable(plan);
+        return { customerId: plan.customerId, change: { kind: change.kind, planId: plan.id } };
+      }
+      case "payment-delete": {
+        const payment = store.payment(change.paymentId);
+        editable(payment);
+        return { customerId: payment.customerId, change: { kind: change.kind, paymentId: payment.id } };
       }
     }
   }

@@ -90,6 +90,11 @@ class Crm extends Context.Service<Crm, CrmShape>()("openbot/backend/Crm") {
           agentPayments: Effect.fn("Crm.agentPayments")(function* (agentId, input) {
             return yield* agentAttempt(() => view.payments(agentId, input));
           }),
+          agentApply: Effect.fn("Crm.agentApply")(function* (agentId, input) {
+            const result = yield* agentAttempt(() => view.apply(agentId, input));
+            if (result.ok) yield* Effect.sync(dependencies.changed);
+            return result;
+          }),
           agentPropose: Effect.fn("Crm.agentPropose")(function* (agentId, input) {
             const proposalId = yield* agentAttempt(() => view.propose(agentId, input));
             yield* Effect.sync(dependencies.changed);

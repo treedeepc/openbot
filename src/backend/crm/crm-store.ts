@@ -306,7 +306,7 @@ function decodeSource(row: DynamicRecord): CrmSource {
   };
 }
 
-function editable(row: { source: CrmSourceKind | null }): void {
+export function editable(row: { source: CrmSourceKind | null }): void {
   if (row.source !== null) throw crmRefused("error.crm.sourceOwned");
 }
 
@@ -603,12 +603,14 @@ export class CrmStore {
     };
   }
 
-  apply(change: CrmChange, actor: CrmActor): CrmApplyResult {
-    if (!isCrmChange(change) || actor.kind !== "person") throw crmRefused("error.crm.invalidChange");
+  apply(change: CrmChange | CrmProposedChange, actor: CrmActor, note: string | null = null): CrmApplyResult {
+    if (!(isCrmChange(change) || isCrmProposedChange(change)) || actor.kind === "source")
+      throw crmRefused("error.crm.invalidChange");
+    if (change.kind === "proposal-decide" && actor.kind !== "person") throw crmRefused("error.crm.invalidChange");
     const outcome = this.transaction(() =>
       change.kind === "proposal-decide"
         ? this.#decide(change.proposalId, change.approve, actor)
-        : { result: new CrmWrite(this, actor, null).apply(change), error: null },
+        : { result: new CrmWrite(this, actor, null, note).apply(change), error: null },
     );
     if (outcome.error) throw outcome.error;
     return outcome.result;
@@ -727,13 +729,15 @@ export class CrmWrite {
   readonly #store: CrmStore;
   readonly #actor: CrmActor;
   readonly #proposedBy: string | null;
+  readonly #note: string | null;
   readonly #at: string;
   readonly #touched = new Set<string>();
 
-  constructor(store: CrmStore, actor: CrmActor, proposedBy: string | null) {
+  constructor(store: CrmStore, actor: CrmActor, proposedBy: string | null, note: string | null = null) {
     this.#store = store;
     this.#actor = actor;
     this.#proposedBy = proposedBy;
+    this.#note = note;
     this.#at = store.timestamp();
   }
 
@@ -776,7 +780,7 @@ export class CrmWrite {
         this.#actor.id,
         this.#actor.name,
         kind,
-        JSON.stringify(details),
+        JSON.stringify(this.#note === null ? details : { ...details, reason: this.#note }),
         this.#proposedBy,
         this.#at,
       );
