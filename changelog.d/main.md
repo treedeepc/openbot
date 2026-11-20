@@ -18,6 +18,12 @@
 
 ### Changed
 
+- The list of subtasks above the composer now marks the row under the pointer, and double-clicking a
+  row opens its details, with the actions you can take on that subtask in the dialog. You can also
+  run a subtask from its row or its details, next to Stop.
+- That list now says how long a subtask has gone without progress and why it is waiting, colours the
+  row when it is slow or stuck, and warns at the top when one is stuck. From its details you can hand
+  the work to another member or drop it, and send again a message that never reached its assistant.
 - The side panel now collapses when you close its last tab. Before, it stayed open and showed the
   launcher. A side panel that you opened from the panel button stays open, so it is never taken away
   from you while you use it.

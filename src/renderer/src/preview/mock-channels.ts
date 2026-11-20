@@ -3,6 +3,7 @@ import type {
   AgentEvent,
   Channel,
   ChannelCommand,
+  ChannelDeliveryReceipt,
   ChannelMemory,
   ChannelMessage,
   ChannelPage,
@@ -10,6 +11,7 @@ import type {
   ChannelRoutineRun,
   ChannelSummary,
   ChannelTask,
+  ChannelTaskHealth,
   CreateChannelMemoryInput,
   CreateChannelRoutineInput,
   DeleteChannelMemoryInput,
@@ -91,6 +93,24 @@ export function createMockChannels(
       tasks: structuredClone(tasks.get(channelId) ?? []),
       olderCursor: null,
       throughSequence: messages.get(channelId)?.length ?? 0,
+    }),
+    channelTaskHealth: async ({ channelId }: { channelId: string }): Promise<ChannelTaskHealth[]> =>
+      (tasks.get(channelId) ?? []).map((task) => ({
+        taskId: task.id,
+        stallReason: task.stallReason ?? "none",
+        level: "none",
+        idleMs: 0,
+        since: task.lastActivityAt ?? null,
+        delivery: null,
+      })),
+    resendChannelDelivery: async (input: { deliveryId: string }): Promise<ChannelDeliveryReceipt> => ({
+      deliveryId: input.deliveryId,
+      taskId: "mock-task",
+      agentId: "mock-agent",
+      status: "queued",
+      at: new Date().toISOString(),
+      error: null,
+      resendable: true,
     }),
     channelCommand: async (input: ChannelCommand): Promise<Channel> => {
       const receipt = receipts.get(input.operationId);

@@ -30,6 +30,105 @@
 
 .awaiting-replies-item {
   align-items: center;
+  margin-inline: calc(var(--openbot-space-2) * -1);
+  padding-inline: var(--openbot-space-2);
+  border-radius: var(--openbot-radius-md);
+}
+
+.awaiting-replies-item:hover {
+  background: var(--openbot-hover);
+}
+
+.awaiting-replies-detail-text {
+  margin: var(--openbot-space-2) 0 0;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+  color: var(--openbot-text-secondary);
+  font-size: var(--openbot-text-md);
+}
+
+.awaiting-replies-health {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--openbot-space-1);
+  padding: 0 var(--openbot-space-1-5);
+  border-radius: var(--openbot-radius-pill);
+  background: var(--openbot-warning-soft);
+  color: var(--openbot-warning-text);
+  font-size: var(--openbot-text-sm);
+  white-space: nowrap;
+}
+
+.awaiting-replies-health[data-level="stuck"] {
+  background: var(--openbot-danger-soft);
+  color: var(--openbot-danger-text);
+}
+
+.awaiting-replies-health-idle {
+  font-variant-numeric: tabular-nums;
+}
+
+.awaiting-replies-alert {
+  display: flex;
+  align-items: center;
+  gap: var(--openbot-space-2);
+  margin: 0 var(--openbot-space-3) var(--openbot-space-2);
+  padding: var(--openbot-space-2) var(--openbot-space-3);
+  border: 1px solid var(--openbot-danger);
+  border-radius: var(--openbot-radius-md);
+  background: var(--openbot-danger-soft);
+  color: var(--openbot-danger-text);
+  font-size: var(--openbot-text-md);
+}
+
+.awaiting-replies-alert > svg {
+  width: var(--openbot-icon-sm);
+  height: var(--openbot-icon-sm);
+  flex: 0 0 auto;
+}
+
+.awaiting-replies-health-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--openbot-space-1-5);
+  margin: var(--openbot-space-3) 0 0;
+  padding: var(--openbot-space-3);
+  border: 1px solid var(--openbot-border-grouped);
+  border-radius: var(--openbot-radius-md);
+  background: var(--openbot-bg-grouped);
+}
+
+.awaiting-replies-health-card[data-level="slow"] {
+  border-color: var(--openbot-warning);
+}
+
+.awaiting-replies-health-card[data-level="stuck"] {
+  border-color: var(--openbot-danger);
+}
+
+.awaiting-replies-health-row {
+  display: flex;
+  gap: var(--openbot-space-3);
+  align-items: center;
+  justify-content: space-between;
+  font-size: var(--openbot-text-sm);
+}
+
+.awaiting-replies-health-row dt {
+  color: var(--openbot-text-muted);
+}
+
+.awaiting-replies-health-row dd {
+  display: flex;
+  align-items: center;
+  gap: var(--openbot-space-2);
+  margin: 0;
+  color: var(--openbot-text-primary);
+  text-align: end;
+}
+
+.awaiting-replies-resend {
+  flex: 0 0 auto;
 }
 
 .awaiting-replies-avatar {

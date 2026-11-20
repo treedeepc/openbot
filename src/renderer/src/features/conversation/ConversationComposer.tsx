@@ -529,6 +529,24 @@ export function ConversationComposer() {
                   props.activeTurnId && !channel && steers() && !steerRefused() ? props.onSteerQueuedMessage : undefined
                 }
                 onStop={channel && !channel.readOnly() ? channel.stopAwaitingReply : undefined}
+                onRun={channel && !channel.readOnly() ? channel.resumeAwaitingReply : undefined}
+                agents={
+                  channel
+                    ? channel.workers().map(
+                        (worker) =>
+                          worker.agent ?? {
+                            id: worker.id,
+                            name: worker.name,
+                            avatarSeed: worker.id,
+                            avatarHue: null,
+                            avatarUrl: null,
+                          },
+                      )
+                    : undefined
+                }
+                onReassign={channel && !channel.readOnly() ? channel.reassignAwaitingReply : undefined}
+                onCancelTask={channel && !channel.readOnly() ? channel.cancelAwaitingReply : undefined}
+                onResend={channel && !channel.readOnly() ? channel.resendDelivery : undefined}
               />
             )}
           </ComposerStackCard>

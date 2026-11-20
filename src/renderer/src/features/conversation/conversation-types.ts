@@ -87,6 +87,10 @@ export interface ConversationChannelSource {
   interactionAgentName: () => string | undefined;
   awaitingReplies: () => readonly AwaitingReplyItem[];
   stopAwaitingReply?: ((taskId: string) => void) | undefined;
+  resumeAwaitingReply?: ((taskId: string) => void) | undefined;
+  reassignAwaitingReply?: ((taskId: string, agentId: string) => void) | undefined;
+  cancelAwaitingReply?: ((taskId: string) => void) | undefined;
+  resendDelivery?: ((deliveryId: string) => void) | undefined;
   HeaderTitle: (props: { onOpenSettings: () => void }) => JSX.Element;
   SettingsPane: (props: ConversationChannelSettingsPaneProps) => JSX.Element;
   AboveComposer: () => JSX.Element;

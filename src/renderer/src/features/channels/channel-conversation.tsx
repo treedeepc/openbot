@@ -202,6 +202,7 @@ export function createChannelConversation(env: ChannelConversationEnvironment) {
   }
 
   let rowStopping = false;
+  let rowResuming = false;
   async function stopWork() {
     if (!env.connectionReady()) return;
     for (const taskId of activeRuns()) {
@@ -260,6 +261,37 @@ export function createChannelConversation(env: ChannelConversationEnvironment) {
         .finally(() => {
           rowStopping = false;
         });
+    },
+    resumeAwaitingReply: (taskId) => {
+      if (rowResuming || !env.connectionReady() || readOnly()) return;
+      rowResuming = true;
+      void channels
+        .command({ type: "resume", operationId: crypto.randomUUID(), channelId, taskId, recipientAgentId: null })
+        .finally(() => {
+          rowResuming = false;
+        });
+    },
+    reassignAwaitingReply: (taskId, agentId) => {
+      if (rowResuming || !env.connectionReady() || readOnly()) return;
+      rowResuming = true;
+      void channels
+        .command({ type: "reassign", operationId: crypto.randomUUID(), channelId, taskId, recipientAgentId: agentId })
+        .finally(() => {
+          rowResuming = false;
+        });
+    },
+    cancelAwaitingReply: (taskId) => {
+      if (rowResuming || !env.connectionReady() || readOnly()) return;
+      rowResuming = true;
+      void channels
+        .command({ type: "cancel", operationId: crypto.randomUUID(), channelId, taskId, recipientAgentId: null })
+        .finally(() => {
+          rowResuming = false;
+        });
+    },
+    resendDelivery: (deliveryId) => {
+      if (!env.connectionReady() || readOnly()) return;
+      void channels.resendDelivery(deliveryId);
     },
     HeaderTitle: (props) => <ChannelHeaderTitle channelId={channelId} onOpenSettings={props.onOpenSettings} />,
     SettingsPane: (props) => (

@@ -553,6 +553,16 @@ export function createChannelsController(env: ChannelsEnvironment) {
       };
     },
     command,
+    resendDelivery: async (deliveryId: string) => {
+      const resend = env.port().agent.resendChannelDelivery;
+      if (!resend) return;
+      const account = env.scopeKey();
+      try {
+        await resend({ deliveryId });
+      } finally {
+        if (!disposed && account === env.scopeKey()) await refreshAfter();
+      }
+    },
     send,
     perform,
     loadOlder,

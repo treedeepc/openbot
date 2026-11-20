@@ -20,7 +20,7 @@ export interface ChannelsPort {
     ChannelMemoriesApi &
     ChannelRoutinesApi &
     Partial<Pick<OpenBotDesktopApi["agent"], "discardDraftAttachment" | "downloadAttachments">> &
-    Partial<Pick<OpenBotDesktopApi["agent"], "deleteChannelMessage">> &
+    Partial<Pick<OpenBotDesktopApi["agent"], "deleteChannelMessage" | "resendChannelDelivery">> &
     Partial<Pick<OpenBotDesktopApi["agent"], "setChannelImage">> &
     Partial<Pick<OpenBotDesktopApi["agent"], "clearChannelContext" | "compactChannelContext" | "deleteChannelHistory">>;
   eventRoutines?: EventRoutinesApi | undefined;

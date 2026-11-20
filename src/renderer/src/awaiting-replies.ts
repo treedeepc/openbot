@@ -120,6 +120,7 @@ export function channelAwaitingReplies(input: ChannelAwaitingInput): AwaitingRep
         name: input.name(task.ownerAgentId),
         state,
         preview: previewText(task.instruction),
+        health: task.health,
         ...(state === "replied" && parent.ownerAgentId
           ? { detail: t("chat.awaiting.readsNext", { name: input.name(parent.ownerAgentId) }) }
           : {}),
