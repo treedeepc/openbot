@@ -30,6 +30,8 @@ export const messages = {
   "settings.movingFaces.title": "動くエージェントの顔",
   "settings.movingFaces.description":
     "エージェントの顔がまばたきして動きます。GPU のないコンピュータでは最初は止まっています。",
+  "settings.startupAnimation.title": "起動アニメーション",
+  "settings.startupAnimation.description": "OpenBot の起動中にエージェントのアニメーションを表示します。",
   "settings.logoColor.title": "ロゴの色",
   "settings.logoColor.description": "Dock、タスクバー、Dynamic Island に表示されます。",
   "settings.logoColor.buildNote": "このビルドは独自のロゴの色を使います。選択はリリース版のアプリに適用されます。",
@@ -57,6 +59,7 @@ export const messages = {
   "settings.chatBackdrop.sunset": "レトロな夕焼け",
   "settings.chatBackdrop.snowfall": "雪",
   "settings.chatBackdrop.fireflies": "ホタル",
+  "settings.chatBackdrop.coast": "ネオンの海岸",
   "settings.chatBackdrop.upload": "画像をアップロード…",
   "settings.chatBackdrop.uploadRefused": "20 MB 以下の PNG、JPEG、GIF、WebP、または AVIF 画像を使ってください。",
   "settings.chatBackdrop.saveFailed": "背景を保存できませんでした。",
@@ -737,6 +740,10 @@ export const messages = {
   "settings.voice.talkKey.refused": "キーをもう 1 つ追加",
   "settings.voice.talkKey.reset": "リセット",
   "settings.voice.live.signIn": "ライブ音声を使うには、ChatGPT アカウントで Codex にサインインしてください。",
+  "settings.voice.live.account": "アカウント",
+  "settings.voice.live.accountAutomatic": "自動",
+  "settings.voice.live.accountDescription":
+    "ライブ音声が使う ChatGPT アカウントです。プランに音声が含まれるアカウントを選んでください。",
   "settings.transfer.title": "このサーバーを別のコンピューターに移動",
   "settings.transfer.lede": "エージェントとそのスキル、ルーティン、メモリー、ファイルを 1 つのファイルにまとめます。",
   "settings.transfer.flow.label": "移行の流れ",

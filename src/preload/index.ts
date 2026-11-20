@@ -133,6 +133,7 @@ import {
   decodeMemory,
   decodeMemorySelection,
   decodeOptionalMemorySelection,
+  decodePendingPrompts,
   decodeProviderApiKeyState,
   decodeProviderCodeLoginStart,
   decodeProviderUsageResetOutcomeFromMain,
@@ -324,7 +325,6 @@ import {
   decodePasswordManagerResponses,
 } from "./password-manager-decoding";
 import { decodeProviderRuntimeSnapshot } from "./provider-runtime";
-import { decodeRoutineFlowCanvas, decodeRoutineFlowLink } from "./routine-flow-decoding";
 import {
   decodeRoutineResultDeliveries,
   decodeRoutineResultDestination,
@@ -694,6 +694,7 @@ const agentGroup = bridgeGroup(IPC_ENDPOINTS.agent, {
   respondToPrompt: decodeVoid,
   respondToApproval: decodeVoid,
   readPendingApproval: decodePendingApproval,
+  listPendingPrompts: decodePendingPrompts,
   respondToBrowserSecret: decodeVoid,
   respondToBrowserTakeover: decodeVoid,
   scopedEvent: decodeScopedAgentEvent,
@@ -825,6 +826,7 @@ const openbotApi: OpenBotDesktopApi = {
     renameProviderAccount: decodeAgentStatusFromMain,
     removeProviderAccount: decodeAgentStatusFromMain,
     setProviderAccountPool: decodeAgentStatusFromMain,
+    setLiveVoiceAccount: decodeAgentStatusFromMain,
     signOutProvider: decodeAgentStatusFromMain,
     providerUsageResets: decodeProviderUsageResetsFromMain,
     resetProviderUsage: decodeProviderUsageResetOutcomeFromMain,
@@ -893,15 +895,6 @@ const openbotApi: OpenBotDesktopApi = {
     removeDownload: decodeProviderRuntimeSnapshot,
     checkForUpdates: decodeProviderRuntimeSnapshot,
     event: decodeProviderRuntimeSnapshot,
-  }),
-  routineFlows: bridgeGroup(IPC_ENDPOINTS.routineFlows, {
-    canvas: decodeRoutineFlowCanvas,
-    savePosition: decodeVoid,
-    removePosition: decodeVoid,
-    connect: decodeRoutineFlowLink,
-    disconnect: decodeVoid,
-    updateLink: decodeRoutineFlowLink,
-    stopRun: decodeVoid,
   }),
   workflows: bridgeGroup(IPC_ENDPOINTS.workflows, {
     list: decodeWorkflowSummaries,
@@ -1209,6 +1202,7 @@ const openbotApi: OpenBotDesktopApi = {
     renameAccount: decodeVoid,
     removeAccount: decodeVoid,
     setAccountPool: decodeVoid,
+    setLiveVoiceAccount: decodeVoid,
     hostDefaultProvider: decodeHostDefaultProviderFromMain,
     setHostDefaultProvider: decodeHostDefaultProviderFromMain,
     usageResets: decodeProviderUsageResetsFromMain,

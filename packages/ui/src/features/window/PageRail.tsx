@@ -20,7 +20,6 @@ import {
   Sparkles,
   Store,
   Waypoints,
-  Workflow,
 } from "@openbot/ui";
 import { AccountUsageDetails, AccountUsageWindowList } from "@openbot/ui/features/account/AccountUsageDetails";
 import { type AccountUsageProviderRow, accountUsageRowKey } from "@openbot/ui/features/account/account-usage-view";
@@ -372,7 +371,6 @@ function MediaCreditsButton(props: { row: MediaCreditsRailRow; onOpen: (button: 
 
 export type PageRailPage =
   | "agents"
-  | "routines"
   | "workflows"
   | "tasks"
   | "schedule"
@@ -384,7 +382,6 @@ export type PageRailPage =
   | "settings";
 
 export const PAGE_RAIL_PINNABLE_PAGES = [
-  "routines",
   "workflows",
   "tasks",
   "schedule",
@@ -407,7 +404,6 @@ export interface PageRailProps {
   mediaCredits?: readonly MediaCreditsRailRow[] | undefined;
   onMediaCredits?: ((provider: MediaCreditsRailRow["provider"]) => void) | undefined;
   onAgents: () => void;
-  onRoutines?: (() => void) | undefined;
   onWorkflows?: (() => void) | undefined;
   onPreloadWorkflows?: (() => void) | undefined;
   onTasks?: ((button: HTMLElement) => void) | undefined;
@@ -574,15 +570,7 @@ export function PageRail(props: PageRailProps) {
   });
   const pages = createMemo((): RailPage[] => {
     const list: RailPage[] = [];
-    const { onRoutines, onWorkflows, onTasks, onSchedule } = props;
-    if (onRoutines) {
-      list.push({
-        id: "routines",
-        label: t("sidebar.view.routines"),
-        icon: Workflow,
-        open: () => onRoutines(),
-      });
-    }
+    const { onWorkflows, onTasks, onSchedule } = props;
     if (onWorkflows) {
       list.push({
         id: "workflows",

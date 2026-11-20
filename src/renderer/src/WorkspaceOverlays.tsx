@@ -54,6 +54,7 @@ import {
 import { InstallServerOverlay } from "./features/servers/InstallServerOverlay";
 import { mcpToolRuntimeNote } from "./features/servers/mcp-servers";
 import { OwnerTransferPrompt } from "./features/servers/OwnerTransferPrompt";
+import { ServerPlanReminder } from "./features/servers/ServerPlanReminder";
 import type { ServerCopyOptions } from "./features/servers/ServerTransferPanel";
 import { useServerActions } from "./features/servers/server-actions";
 import {
@@ -112,6 +113,7 @@ export function WorkspaceOverlays(props: AccountProps) {
       <CreateLocalServer />
       <InstallServer />
       <HostedUpsell account={props.account} />
+      <PlanReminder />
       <LeaveServer />
       <RestartServer />
       <ServerSettings />
@@ -218,6 +220,20 @@ export function SkillsMarketplace() {
       onMcpSignInRequestHandled={() => setPendingMcpSignIn(null)}
       onMcpSignIns={(serverId, states) => setMcpSignIns({ serverId, states })}
     />
+  );
+}
+
+function PlanReminder() {
+  const platform = usePlatform();
+  const { orderedServers, callbacks } = useServerActions();
+  return (
+    <Show when={platform.chatWindow === null}>
+      <ServerPlanReminder
+        servers={orderedServers()}
+        planDeletesAt={callbacks.planDeletesAt}
+        onRenew={callbacks.onRenewPlan}
+      />
+    </Show>
   );
 }
 
@@ -992,6 +1008,13 @@ function AppSettings(props: AccountProps) {
   });
   const codexLiveAccess = () =>
     activeServer()?.kind === "local" ? codexLiveAccessOf(agentStatus().providers) : undefined;
+  const { providerAccounts } = useProviders();
+  const liveVoiceAccount = () => {
+    const choose = providerAccounts()?.setLiveVoiceAccount;
+    const codex = agentStatus().providers?.find((row) => row.id === "codex");
+    if (!choose || !codex?.accounts) return undefined;
+    return { accounts: codex.accounts, accountId: codex.liveVoiceAccount ?? null, choose };
+  };
   const {
     appSettingsOpen,
     notificationFocusRequest,
@@ -1060,6 +1083,7 @@ function AppSettings(props: AccountProps) {
           setAddServerOpen(true, "settings_billing");
         }}
         codexLiveAccess={codexLiveAccess()}
+        liveVoiceAccount={liveVoiceAccount()}
         onConnectCodex={() => {
           setAppSettingsOpen(false);
           openServerSettings(LOCAL_SERVER_ID, null, "providers");

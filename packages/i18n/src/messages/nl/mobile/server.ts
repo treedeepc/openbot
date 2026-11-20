@@ -228,6 +228,7 @@ export const messages = {
   "mobile.server.threads.hold.serverBusy": "Wachtend. De host voert zoveel beurten uit als zijn geheugen toelaat.",
   "mobile.server.threads.hold.agentBusy": "Wacht tot ander werk van deze agent klaar is.",
   "mobile.server.threads.hold.oneTurn": "Wachtend. De aanbieder van deze agent voert één beurt tegelijk uit.",
+  "mobile.server.threads.hold.signIn": "Wachtend. De aanbieder van deze agent moet worden aangemeld.",
   "mobile.server.threads.offline": "Maak verbinding met deze server om de threads te zien.",
   "mobile.server.threads.loading": "Threads laden…",
   "mobile.server.threads.loadFailed": "Kan de threads van sommige agents niet laden.",
@@ -544,6 +545,8 @@ export const messages = {
   "mobile.server.browserProfiles.addAgents": "Agents toevoegen",
   "mobile.server.browserProfiles.agentsHint":
     "Een tik geeft de agent dit profiel of zet hem terug naar het gedeelde profiel. Een wijziging sluit de open tabbladen van de agent.",
+  "mobile.server.browserProfiles.movedNote":
+    "Logins bij sites blijven in het oude profiel. Een verplaatste agent moet opnieuw inloggen op deze sites.",
   "mobile.server.browserProfiles.clear": "Gegevens wissen",
   "mobile.server.browserProfiles.clearTitle": "Gegevens van {name} wissen?",
   "mobile.server.browserProfiles.clearBody":
@@ -1234,6 +1237,8 @@ export const messages = {
   "mobile.server.mcp.connected": { one: "Verbonden · {count} tool", other: "Verbonden · {count} tools" },
   "mobile.server.mcp.signInOnComputer":
     "Deze MCP-server vraagt je in te loggen. Log in vanuit OpenBot op een computer en test daarna opnieuw.",
+  "mobile.server.mcp.signIn": "Inloggen",
+  "mobile.server.mcp.signInHere": "Deze MCP-server vraagt je om in te loggen. Tik op Inloggen en test daarna opnieuw.",
   "mobile.server.mcp.signedInDescription": "{server} is ingelogd bij deze MCP-server.",
   "mobile.server.mcp.signOut": "Uitloggen",
   "mobile.server.mcp.saveFailed": "Kan de wijziging niet opslaan. Probeer het opnieuw.",
@@ -1286,6 +1291,7 @@ export const messages = {
   "mobile.server.planLimits.window.fiveHour": "5 uur",
   "mobile.server.planLimits.window.hours": { one: "{count} uur", other: "{count} uur" },
   "mobile.server.planLimits.window.minutes": "{minutes} min",
+  "mobile.server.planLimits.window.group": "{group} · {window}",
   "mobile.server.settings.updates": "Updates",
   "mobile.server.settings.updateAvailable": "Update beschikbaar",
   "mobile.server.route.updates": "Updates",
@@ -1657,4 +1663,6 @@ export const messages = {
   "mobile.server.ownerTransfer.acceptFailed": "Kan de overdracht niet accepteren",
   "mobile.server.ownerTransfer.declineFailed": "Kan de overdracht niet weigeren",
   "mobile.server.ownerTransfer.tryAgain": "Probeer het later opnieuw.",
+  "mobile.server.providers.updateAll": "Alles updaten",
+  "mobile.server.providers.updateAllFailed": "Sommige updates zijn niet gestart. Probeer het opnieuw.",
 } as const satisfies PartialTranslation<typeof source>;

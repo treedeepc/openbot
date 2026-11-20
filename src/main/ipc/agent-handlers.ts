@@ -159,6 +159,12 @@ import {
   PENDING_APPROVAL_ROUTES,
 } from "@openbot/contracts/team-protocol/pending-approval-v1";
 import {
+  decodePendingPromptsResponse,
+  PENDING_PROMPTS_CAPABILITY,
+  PENDING_PROMPTS_ROUTES,
+  pendingPromptsWithinLimits,
+} from "@openbot/contracts/team-protocol/pending-prompts-v1";
+import {
   PROVIDER_ACCOUNTS_CAPABILITY,
   PROVIDER_ACCOUNTS_ROUTES,
 } from "@openbot/contracts/team-protocol/provider-accounts-v1";
@@ -166,6 +172,7 @@ import {
   decodeSideQuestionResponse,
   SIDE_QUESTION_CAPABILITY,
   SIDE_QUESTION_ROUTES,
+  SIDE_QUESTION_THREADS_CAPABILITY,
 } from "@openbot/contracts/team-protocol/side-question-v1";
 import {
   SIDEBAR_FOLDERS_CAPABILITY,
@@ -778,7 +785,11 @@ export function agentIpcHandlers({
       askSideQuestion: scopedHandler(parseAskSideQuestion, {
         local: (input) => runCauseEffect(service.askSideQuestion(input)),
         remote: (input, serverId) => {
-          if (!remoteServers.supportsCapability(serverId, SIDE_QUESTION_CAPABILITY))
+          if (
+            !remoteServers.supportsCapability(serverId, SIDE_QUESTION_CAPABILITY) ||
+            (input.taskId !== undefined &&
+              !remoteServers.supportsCapability(serverId, SIDE_QUESTION_THREADS_CAPABILITY))
+          )
             throw new Error(sourceText("error.team.sideQuestionUnsupported"));
           return runCauseEffect(
             remoteServers.request(serverId, SIDE_QUESTION_ROUTES.ask, decodeSideQuestionResponse, {
@@ -787,6 +798,7 @@ export function agentIpcHandlers({
                 agentId: input.agentId,
                 question: input.question,
                 earlier: input.earlier.map(({ question, answer }) => ({ question, answer })),
+                ...(input.taskId === undefined ? {} : { taskId: input.taskId }),
               },
               timeoutMs: 150_000,
             }),
@@ -1593,6 +1605,18 @@ export function agentIpcHandlers({
             remoteServers.request(serverId, PENDING_APPROVAL_ROUTES.read, decodePendingApprovalResponse, {
               method: "POST",
               body: { ...parsed },
+            }),
+          );
+        },
+      }),
+      listPendingPrompts: scopedQueryHandler({
+        local: () => pendingPromptsWithinLimits(service.pendingPrompts()),
+        remote: (serverId) => {
+          if (!remoteServers.supportsCapability(serverId, PENDING_PROMPTS_CAPABILITY)) return [];
+          return runCauseEffect(
+            remoteServers.request(serverId, PENDING_PROMPTS_ROUTES.list, decodePendingPromptsResponse, {
+              method: "POST",
+              body: {},
             }),
           );
         },

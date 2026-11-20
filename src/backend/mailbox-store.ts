@@ -86,6 +86,7 @@ interface StoredMessage {
     | { kind: "agent"; agentId: string }
     | { kind: "routine"; routineId: string; runId: string; routineName: string; scheduledFor: string };
   senderMember?: ConversationMessageSender;
+  requesterIds?: string[];
   text: string;
   attachments: StoredAttachment[];
   voiceRecording?: StoredAttachment;
@@ -195,6 +196,7 @@ interface EnqueueInput {
   senderTaskId?: string;
   sender: StoredMessage["sender"];
   senderMember?: ConversationMessageSender;
+  requesterIds?: readonly string[];
   recipientAgentIds: string[];
   text: string;
   replyToMessageId?: string | null;
@@ -650,6 +652,9 @@ export class MailboxStore {
         id: messageId,
         sender: storedSender(input.sender),
         ...(input.sender.kind === "user" && input.senderMember ? { senderMember: input.senderMember } : {}),
+        ...(input.sender.kind === "agent" && input.requesterIds?.length
+          ? { requesterIds: [...input.requesterIds] }
+          : {}),
         text: rewriteAttachmentReferences(text, (reference) => {
           const attachment = committedByDraftId.get(reference.attachmentId);
           return attachment ? { attachmentId: attachment.id, name: attachment.name } : null;
@@ -1092,6 +1097,23 @@ export class MailboxStore {
     return this.#deliveriesFor(agentId).some(
       (delivery) => isActiveDelivery(delivery) && this.#taskIdOf(delivery, messages) === taskId,
     );
+  }
+
+  taskAwaitsAgent(agentId: string, taskId: string): boolean {
+    const messages = this.#messagesById();
+    return this.#deliveriesFor(agentId).some((delivery) => {
+      if (!isActiveDelivery(delivery)) return false;
+      const message = messages.get(delivery.messageId);
+      return message?.taskId === taskId && message.sender.kind === "agent";
+    });
+  }
+
+  taskRequesterIds(taskId: string): string[] {
+    const ids = new Set<string>();
+    for (const message of this.#state.messages)
+      if (message.taskId === taskId && message.sender.kind === "agent")
+        for (const id of message.requesterIds ?? []) ids.add(id);
+    return [...ids];
   }
 
   deleteTaskMessages = Effect.fn("MailboxStore.deleteTaskMessages")(function* (
@@ -2207,6 +2229,10 @@ export class MailboxStore {
     return this.#state.messages.find((message) => message.id === messageId)?.senderMember;
   }
 
+  requesterIds(messageId: string): readonly string[] {
+    return this.#state.messages.find((message) => message.id === messageId)?.requesterIds ?? [];
+  }
+
   hasReplyFrom(agentId: string, messageId: string): boolean {
     return this.#state.messages.some(
       (message) =>
@@ -2294,6 +2320,7 @@ export class MailboxStore {
     const taskId = answerTaskId && taskOpen(answerTaskId) ? answerTaskId : undefined;
     yield* this.enqueue({
       sender: { kind: "agent", agentId: teammateId },
+      ...(request.requesterIds ? { requesterIds: request.requesterIds } : {}),
       recipientAgentIds: [requesterId],
       text: [
         "Status: blocked",
@@ -2969,22 +2996,25 @@ export class MailboxStore {
     }
   }, Effect.uninterruptible).bind(this);
 
-  requeueResultAfterRestart = Effect.fn("MailboxStore.requeueResultAfterRestart")(function* (
+  requeueAfterRestart = Effect.fn("MailboxStore.requeueAfterRestart")(function* (
     this: MailboxStore,
     deliveryId: string,
+    routineRetry: boolean,
   ): Effect.fn.Return<boolean, StoredStateFailure> {
     const delivery = this.#state.deliveries.find((candidate) => candidate.id === deliveryId);
     const message = delivery && this.#state.messages.find((candidate) => candidate.id === delivery.messageId);
     const key = `${RESTARTED_RESULT_KEY_PREFIX}${deliveryId}`;
+    const teammateResult =
+      message?.sender.kind === "agent" &&
+      message.sender.agentId !== delivery?.recipientAgentId &&
+      message.replyToMessageId !== null &&
+      message.expectsReply === false &&
+      !message.channelId;
     if (
       !delivery ||
       !message ||
       (delivery.status !== "starting" && delivery.status !== "running") ||
-      message.sender.kind !== "agent" ||
-      message.sender.agentId === delivery.recipientAgentId ||
-      message.replyToMessageId === null ||
-      message.expectsReply !== false ||
-      message.channelId ||
+      !(routineRetry ? message.sender.kind === "routine" : teammateResult) ||
       this.#state.idempotency[key] !== undefined
     )
       return false;
@@ -3841,6 +3871,7 @@ function isStoredMessage(value: unknown): value is StoredMessage {
         isString(value.sender.routineName) &&
         isString(value.sender.scheduledFor))) &&
     (value.senderMember === undefined || isConversationMessageSender(value.senderMember)) &&
+    (value.requesterIds === undefined || (Array.isArray(value.requesterIds) && value.requesterIds.every(isString))) &&
     isString(value.text) &&
     Array.isArray(value.attachments) &&
     value.attachments.every(isStoredAttachment) &&

@@ -217,6 +217,7 @@ export const messages = {
   "mobile.server.threads.hold.serverBusy": "等待中。这台主机能同时运行的轮次取决于内存。",
   "mobile.server.threads.hold.agentBusy": "正在等待该助手的其他工作结束。",
   "mobile.server.threads.hold.oneTurn": "等待中。该助手的服务商一次只运行一轮。",
+  "mobile.server.threads.hold.signIn": "等待中。该助手的服务商需要登录。",
   "mobile.server.threads.offline": "连接到此服务器以查看其话题。",
   "mobile.server.threads.loading": "正在加载话题…",
   "mobile.server.threads.loadFailed": "无法加载部分助手的话题。",
@@ -509,6 +510,7 @@ export const messages = {
   "mobile.server.browserProfiles.addAgents": "添加助手",
   "mobile.server.browserProfiles.agentsHint":
     "轻点即可把此配置文件分配给助手,或将其移回共享配置文件。更改会关闭助手打开的标签页。",
+  "mobile.server.browserProfiles.movedNote": "网站登录状态保留在旧配置文件中。移动后的助手必须重新登录这些网站。",
   "mobile.server.browserProfiles.clear": "清除数据",
   "mobile.server.browserProfiles.clearTitle": "清除 {name} 的数据?",
   "mobile.server.browserProfiles.clearBody":
@@ -1139,6 +1141,8 @@ export const messages = {
   "mobile.server.mcp.testFailed": "该 MCP 服务器没有响应。",
   "mobile.server.mcp.connected": { other: "已连接 · {count} 个工具" },
   "mobile.server.mcp.signInOnComputer": "该 MCP 服务器要求登录。请在电脑上的 OpenBot 中登录，然后重新测试。",
+  "mobile.server.mcp.signIn": "登录",
+  "mobile.server.mcp.signInHere": "此 MCP 服务器要求你登录。点按登录，然后再次测试。",
   "mobile.server.mcp.signedInDescription": "{server} 已登录该 MCP 服务器。",
   "mobile.server.mcp.signOut": "退出登录",
   "mobile.server.mcp.saveFailed": "无法保存更改，请重试。",
@@ -1186,6 +1190,7 @@ export const messages = {
   "mobile.server.planLimits.window.fiveHour": "5 小时",
   "mobile.server.planLimits.window.hours": { other: "{count} 小时" },
   "mobile.server.planLimits.window.minutes": "{minutes} 分钟",
+  "mobile.server.planLimits.window.group": "{group} · {window}",
   "mobile.server.settings.updates": "更新",
   "mobile.server.settings.updateAvailable": "有可用更新",
   "mobile.server.route.updates": "更新",
@@ -1534,4 +1539,6 @@ export const messages = {
   "mobile.server.ownerTransfer.acceptFailed": "无法接受转让",
   "mobile.server.ownerTransfer.declineFailed": "无法拒绝转让",
   "mobile.server.ownerTransfer.tryAgain": "请稍后再试。",
+  "mobile.server.providers.updateAll": "全部更新",
+  "mobile.server.providers.updateAllFailed": "部分更新未能开始。请重试。",
 } as const satisfies PartialTranslation<typeof source>;

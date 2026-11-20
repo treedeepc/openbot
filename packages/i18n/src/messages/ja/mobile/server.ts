@@ -226,6 +226,7 @@ export const messages = {
   "mobile.server.threads.hold.serverBusy": "待機中です。ホストはメモリが許す数のターンを実行します。",
   "mobile.server.threads.hold.agentBusy": "このエージェントの他の作業が終わるのを待っています。",
   "mobile.server.threads.hold.oneTurn": "待機中です。このエージェントのプロバイダーは一度に1ターンずつ実行します。",
+  "mobile.server.threads.hold.signIn": "待機中です。このエージェントのプロバイダーへのサインインが必要です。",
   "mobile.server.threads.offline": "このサーバーに接続するとスレッドが表示されます。",
   "mobile.server.threads.loading": "スレッドを読み込み中…",
   "mobile.server.threads.loadFailed": "一部のエージェントのスレッドを読み込めませんでした。",
@@ -540,6 +541,8 @@ export const messages = {
   "mobile.server.browserProfiles.addAgents": "エージェントを追加",
   "mobile.server.browserProfiles.agentsHint":
     "タップすると、エージェントにこのプロファイルを割り当てるか、共有プロファイルに戻します。変更するとエージェントの開いているタブは閉じます。",
+  "mobile.server.browserProfiles.movedNote":
+    "サイトへのサインインは古いプロファイルに残ります。移動したエージェントはこれらのサイトに再度サインインする必要があります。",
   "mobile.server.browserProfiles.clear": "データを消去",
   "mobile.server.browserProfiles.clearTitle": "{name} のデータを消去しますか?",
   "mobile.server.browserProfiles.clearBody":
@@ -1236,6 +1239,9 @@ export const messages = {
   "mobile.server.mcp.connected": { other: "接続済み · ツール {count} 個" },
   "mobile.server.mcp.signInOnComputer":
     "この MCP サーバーはサインインを求めています。コンピューターの OpenBot からサインインして、もう一度テストしてください。",
+  "mobile.server.mcp.signIn": "サインイン",
+  "mobile.server.mcp.signInHere":
+    "この MCP サーバーはサインインを求めています。サインインをタップしてから、もう一度テストしてください。",
   "mobile.server.mcp.signedInDescription": "{server} はこの MCP サーバーにサインインしています。",
   "mobile.server.mcp.signOut": "サインアウト",
   "mobile.server.mcp.saveFailed": "変更を保存できませんでした。もう一度お試しください。",
@@ -1286,6 +1292,7 @@ export const messages = {
   "mobile.server.planLimits.window.fiveHour": "5 時間",
   "mobile.server.planLimits.window.hours": { other: "{count} 時間" },
   "mobile.server.planLimits.window.minutes": "{minutes} 分",
+  "mobile.server.planLimits.window.group": "{group} · {window}",
   "mobile.server.settings.updates": "アップデート",
   "mobile.server.settings.updateAvailable": "アップデートあり",
   "mobile.server.route.updates": "アップデート",
@@ -1659,4 +1666,6 @@ export const messages = {
   "mobile.server.ownerTransfer.acceptFailed": "移行を承認できませんでした",
   "mobile.server.ownerTransfer.declineFailed": "移行を拒否できませんでした",
   "mobile.server.ownerTransfer.tryAgain": "後でもう一度お試しください。",
+  "mobile.server.providers.updateAll": "すべて更新",
+  "mobile.server.providers.updateAllFailed": "一部の更新を開始できませんでした。もう一度お試しください。",
 } as const satisfies PartialTranslation<typeof source>;

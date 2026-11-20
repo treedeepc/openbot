@@ -32,6 +32,7 @@ import {
   GITHUB_CONNECTOR_MCP_SERVER_ID,
   isAgentProvider,
   isCustomProviderHarness,
+  isKeyOnlyProvider,
   usageQuotaForModel,
   workspaceAccessEnforced,
 } from "@openbot/contracts/ipc";
@@ -41,7 +42,7 @@ import { classifyFailure } from "@openbot/telemetry";
 import { classifyUserError } from "@openbot/user-errors";
 import { Deferred, Effect, Exit, Fiber, Result, Schema, Scope, Semaphore } from "effect";
 import { isOpenCodeInternalFailure, OPENCODE_INTERNAL_FAILURE } from "./../acp-flavor-opencode";
-import { googleSignInByOpenBot, startAcpAuthentication } from "./../acp-sign-in";
+import { devinSignInPageRelayed, googleSignInByOpenBot, startAcpAuthentication } from "./../acp-sign-in";
 import {
   type AgentClient,
   AgentProcessExitError,
@@ -115,6 +116,7 @@ import {
   isMcpSessionClosingDiagnostic,
   isMcpSignInDiagnostic,
   isMcpSubsystemDiagnostic,
+  isPiWarningDiagnostic,
   isRustLogBelowErrorDiagnostic,
   isTelemetryExportDiagnostic,
   isToolCallDiagnostic,
@@ -615,8 +617,14 @@ export class ProviderRuntime implements ProviderPort {
                 ?.map((account) => this.#extraModels(row.id, account))
             : undefined;
         const pool = accounts ? this.accountPool(row.id) : null;
+        const liveVoiceAccount = accounts && row.id === "codex" ? this.liveVoiceAccount() : null;
         const withAccounts = accounts
-          ? { ...withSource, accounts, ...(pool ? { accountPool: pool } : {}) }
+          ? {
+              ...withSource,
+              accounts,
+              ...(pool ? { accountPool: pool } : {}),
+              ...(liveVoiceAccount ? { liveVoiceAccount } : {}),
+            }
           : withSource;
         const endpointsPending =
           isCustomProviderHarness(row.id) && this.#hooks.endpointsPending
@@ -750,6 +758,10 @@ export class ProviderRuntime implements ProviderPort {
     );
   }
 
+  hasPendingOperation(): boolean {
+    return this.#providerStarts.size + this.#providerConnectionCommands.size + this.#replacingCli.size > 0;
+  }
+
   activeProcessCount(): number {
     return (
       this.#cliLogin.size +
@@ -853,6 +865,24 @@ export class ProviderRuntime implements ProviderPort {
     logger.info("Stopped a provider CLI that holds a deleted agent's folder.", { provider });
     yield* this.#releaseClient(provider, client);
     return false;
+  }, Effect.uninterruptible).bind(this);
+
+  readonly releaseFolderProcesses = Effect.fn("ProviderRuntime.releaseFolderProcesses")(function* (
+    this: ProviderRuntime,
+    provider: AgentProvider,
+    folder: string,
+  ) {
+    const client = this.#clients.get(provider);
+    if (!client?.releaseFolderProcesses || this.#hooks.isStopping() || this.#status.phase !== "ready") return null;
+    const kept = yield* client.releaseFolderProcesses(folder);
+    if (kept === null) return null;
+    logger.info(
+      kept
+        ? "Kept a provider process that holds a deleted agent's folder, because work uses it."
+        : "Stopped the provider processes that hold a deleted agent's folder.",
+      { provider },
+    );
+    return kept;
   }, Effect.uninterruptible).bind(this);
 
   keepsSharedProcess(provider: AgentProvider): boolean {
@@ -1567,7 +1597,10 @@ export class ProviderRuntime implements ProviderPort {
                 : {}),
               privateTemp: temp && { ...temp, provider: providerLabel(provider) },
               ...(provider === "antigravity" && googleSignInByOpenBot(onHost)
-                ? { openGoogleSignIn: openExternal }
+                ? { openSignInPage: { site: "google", open: openExternal } }
+                : {}),
+              ...(provider === "devin" && onHost && devinSignInPageRelayed()
+                ? { openSignInPage: { site: "devin", open: openExternal } }
                 : {}),
             }).pipe(
               Effect.map((login) => ({
@@ -1710,6 +1743,30 @@ export class ProviderRuntime implements ProviderPort {
     if (!enabled) this.#poolInUse.delete(provider);
     return this.status();
   }).bind(this);
+
+  readonly setLiveVoiceAccount = Effect.fn("ProviderRuntime.setLiveVoiceAccount")(function* (
+    this: ProviderRuntime,
+    accountId: string | null,
+  ) {
+    const accounts = yield* this.#requireAccounts("codex");
+    yield* accounts.setLiveVoiceAccount(accountId).pipe(toProviderOperationFailed);
+    return this.status();
+  }).bind(this);
+
+  liveVoiceAccount(): string | null {
+    return this.#providerAccounts?.liveVoiceAccount() ?? null;
+  }
+
+  otherCodexAccounts(inUse: string): boolean {
+    const ownSignIn =
+      this.status().providers?.find((row) => row.id === "codex")?.state === "available" &&
+      !this.ownSignInUsesKey("codex");
+    const accounts = [
+      ...(ownSignIn ? [DEFAULT_PROVIDER_ACCOUNT_ID] : []),
+      ...(this.#providerAccounts?.planAccounts("codex") ?? []),
+    ];
+    return accounts.some((accountId) => accountId !== inUse);
+  }
 
   accountPool(provider: AgentProvider): ProviderAccountPool | null {
     const pool = this.#providerAccounts?.pool(provider);
@@ -3179,14 +3236,12 @@ export class ProviderRuntime implements ProviderPort {
     const hasActiveClient = this.#clients.has(provider) || (keepsReleased && this.#released.has(provider));
     const fallbackMessage = `OpenBot could not connect ${providerLabel(provider)}. Try again.`;
     const rawMessage = error instanceof Error ? error.message : String(error);
-    const timeout = isProviderTimeout(error);
-    if (timeout) this.#recordProviderError(provider, error);
-    const message =
-      (timeout && matchingSourceKeys(rawMessage).length > 0) ||
+    const readable =
+      matchingSourceKeys(rawMessage).length > 0 ||
       error instanceof ProviderSignInError ||
-      /^(ChatGPT connection|OpenBot)/u.test(rawMessage)
-        ? rawMessage
-        : fallbackMessage;
+      /^(ChatGPT connection|OpenBot)/u.test(rawMessage);
+    if (isProviderTimeout(error) || !readable) this.#recordProviderError(provider, error);
+    const message = readable ? redactText(rawMessage) : fallbackMessage;
     const status = hasActiveClient
       ? {
           state: "available" as const,
@@ -3736,7 +3791,11 @@ export class ProviderRuntime implements ProviderPort {
         stderrLogger.warn("Mistral Vibe logged a diagnostic.", { provider: client.provider, message });
         return;
       }
-      if (isGlogBelowErrorDiagnostic(message) || isRustLogBelowErrorDiagnostic(message)) {
+      if (
+        isGlogBelowErrorDiagnostic(message) ||
+        isRustLogBelowErrorDiagnostic(message) ||
+        ((client.provider === "pi" || isKeyOnlyProvider(client.provider)) && isPiWarningDiagnostic(message))
+      ) {
         stderrLogger.info("A provider logged an info or warning record.", { provider: client.provider, message });
         return;
       }

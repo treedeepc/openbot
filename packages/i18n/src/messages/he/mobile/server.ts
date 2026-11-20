@@ -342,6 +342,7 @@ export const messages = {
   "mobile.server.threads.hold.serverBusy": "ממתין. המארח מריץ כמה תורות שהזיכרון שלו מאפשר.",
   "mobile.server.threads.hold.agentBusy": "ממתין לסיום עבודה אחרת של הסוכן הזה.",
   "mobile.server.threads.hold.oneTurn": "ממתין. הספק של הסוכן הזה מריץ תור אחד בכל פעם.",
+  "mobile.server.threads.hold.signIn": "ממתין. הספק של הסוכן הזה דורש התחברות.",
   "mobile.server.threads.offline": "יש להתחבר לשרת הזה כדי לראות את השרשורים שלו.",
   "mobile.server.threads.loading": "טוען שרשורים…",
   "mobile.server.threads.loadFailed": "לא ניתן לטעון את השרשורים של חלק מהסוכנים.",
@@ -650,6 +651,8 @@ export const messages = {
   "mobile.server.browserProfiles.addAgents": "הוספת סוכנים",
   "mobile.server.browserProfiles.agentsHint":
     "נגיעה נותנת לסוכן את הפרופיל הזה, או מחזירה אותו לפרופיל המשותף. שינוי סוגר את הלשוניות הפתוחות של הסוכן.",
+  "mobile.server.browserProfiles.movedNote":
+    "ההתחברויות לאתרים נשארות בפרופיל הישן. סוכן שהועבר צריך להתחבר שוב לאתרים האלה.",
   "mobile.server.browserProfiles.clear": "ניקוי נתונים",
   "mobile.server.browserProfiles.clearTitle": "לנקות את הנתונים של {name}?",
   "mobile.server.browserProfiles.clearBody":
@@ -1680,6 +1683,8 @@ export const messages = {
   "mobile.server.mcp.testFailed": "שרת ה-MCP לא ענה.",
   "mobile.server.mcp.connected": { one: "מחובר · כלי אחד", two: "מחובר · שני כלים", other: "מחובר · {count} כלים" },
   "mobile.server.mcp.signInOnComputer": "שרת ה-MCP הזה דורש התחברות. יש להתחבר מ-OpenBot במחשב ואז לבדוק שוב.",
+  "mobile.server.mcp.signIn": "התחברות",
+  "mobile.server.mcp.signInHere": "שרת MCP זה מבקש ממך להתחבר. הקש על התחברות ואז בדוק שוב.",
   "mobile.server.mcp.signedInDescription": "{server} מחובר לשרת ה-MCP הזה.",
   "mobile.server.mcp.signOut": "התנתקות",
   "mobile.server.mcp.saveFailed": "לא ניתן לשמור את השינוי. אפשר לנסות שוב.",
@@ -1727,6 +1732,7 @@ export const messages = {
   "mobile.server.planLimits.window.fiveHour": "5 שעות",
   "mobile.server.planLimits.window.hours": { one: "שעה", two: "שעתיים", other: "{count} שעות" },
   "mobile.server.planLimits.window.minutes": "{minutes} דק׳",
+  "mobile.server.planLimits.window.group": "{group} · {window}",
   "mobile.server.settings.updates": "עדכונים",
   "mobile.server.settings.updateAvailable": "עדכון זמין",
   "mobile.server.route.updates": "עדכונים",
@@ -2100,4 +2106,6 @@ export const messages = {
   "mobile.server.ownerTransfer.acceptFailed": "לא ניתן לאשר את ההעברה",
   "mobile.server.ownerTransfer.declineFailed": "לא ניתן לדחות את ההעברה",
   "mobile.server.ownerTransfer.tryAgain": "אפשר לנסות שוב מאוחר יותר.",
+  "mobile.server.providers.updateAll": "עדכון הכול",
+  "mobile.server.providers.updateAllFailed": "חלק מהעדכונים לא התחילו. נסו שוב.",
 } as const satisfies PartialTranslation<typeof source>;

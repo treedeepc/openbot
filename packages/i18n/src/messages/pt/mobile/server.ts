@@ -229,6 +229,7 @@ export const messages = {
   "mobile.server.threads.hold.serverBusy": "Em espera. O host executa tantos turnos quanto a memória permite.",
   "mobile.server.threads.hold.agentBusy": "Aguardando outro trabalho deste agente terminar.",
   "mobile.server.threads.hold.oneTurn": "Em espera. O provedor deste agente executa um turno por vez.",
+  "mobile.server.threads.hold.signIn": "Em espera. O provedor deste agente precisa de login.",
   "mobile.server.threads.offline": "Conecte-se a este servidor para ver os tópicos dele.",
   "mobile.server.threads.loading": "Carregando tópicos…",
   "mobile.server.threads.loadFailed": "Não foi possível carregar os tópicos de alguns agentes.",
@@ -549,6 +550,8 @@ export const messages = {
   "mobile.server.browserProfiles.addAgents": "Adicionar agentes",
   "mobile.server.browserProfiles.agentsHint":
     "Um toque dá este perfil ao agente ou o devolve ao perfil compartilhado. Uma alteração fecha as abas abertas do agente.",
+  "mobile.server.browserProfiles.movedNote":
+    "Os logins nos sites ficam no perfil antigo. Um agente movido precisa entrar nesses sites novamente.",
   "mobile.server.browserProfiles.clear": "Apagar dados",
   "mobile.server.browserProfiles.clearTitle": "Apagar os dados de {name}?",
   "mobile.server.browserProfiles.clearBody":
@@ -1275,6 +1278,8 @@ export const messages = {
   "mobile.server.mcp.connected": { one: "Conectado · {count} ferramenta", other: "Conectado · {count} ferramentas" },
   "mobile.server.mcp.signInOnComputer":
     "Este servidor MCP pede login. Entre pelo OpenBot em um computador e teste de novo.",
+  "mobile.server.mcp.signIn": "Entrar",
+  "mobile.server.mcp.signInHere": "Este servidor MCP pede que você entre. Toque em Entrar e teste de novo.",
   "mobile.server.mcp.signedInDescription": "{server} está conectado a este servidor MCP.",
   "mobile.server.mcp.signOut": "Sair",
   "mobile.server.mcp.saveFailed": "Não foi possível salvar a alteração. Tente de novo.",
@@ -1325,6 +1330,7 @@ export const messages = {
   "mobile.server.planLimits.window.fiveHour": "5 horas",
   "mobile.server.planLimits.window.hours": { one: "{count} hora", other: "{count} horas" },
   "mobile.server.planLimits.window.minutes": "{minutes} min",
+  "mobile.server.planLimits.window.group": "{group} · {window}",
   "mobile.server.settings.updates": "Atualizações",
   "mobile.server.settings.updateAvailable": "Atualização disponível",
   "mobile.server.route.updates": "Atualizações",
@@ -1699,4 +1705,6 @@ export const messages = {
   "mobile.server.ownerTransfer.acceptFailed": "Não foi possível aceitar a transferência",
   "mobile.server.ownerTransfer.declineFailed": "Não foi possível recusar a transferência",
   "mobile.server.ownerTransfer.tryAgain": "Tente novamente mais tarde.",
+  "mobile.server.providers.updateAll": "Atualizar tudo",
+  "mobile.server.providers.updateAllFailed": "Algumas atualizações não começaram. Tente novamente.",
 } as const satisfies PartialTranslation<typeof source>;

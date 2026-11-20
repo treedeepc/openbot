@@ -233,6 +233,7 @@ export const messages = {
   "mobile.server.threads.hold.serverBusy": "Bekleniyor. Ana makine, belleğinin izin verdiği kadar tur çalıştırır.",
   "mobile.server.threads.hold.agentBusy": "Bu ajanın diğer işlerinin bitmesi bekleniyor.",
   "mobile.server.threads.hold.oneTurn": "Bekleniyor. Bu ajanın sağlayıcısı aynı anda tek tur çalıştırır.",
+  "mobile.server.threads.hold.signIn": "Bekleniyor. Bu ajanın sağlayıcısında oturum açılması gerekiyor.",
   "mobile.server.threads.offline": "Mesaj dizilerini görmek için bu sunucuya bağlanın.",
   "mobile.server.threads.loading": "Mesaj dizileri yükleniyor…",
   "mobile.server.threads.loadFailed": "Bazı ajanların mesaj dizileri yüklenemedi.",
@@ -548,6 +549,8 @@ export const messages = {
   "mobile.server.browserProfiles.addAgents": "Ajan ekle",
   "mobile.server.browserProfiles.agentsHint":
     "Dokunmak ajana bu profili verir veya onu ortak profile geri taşır. Bir değişiklik ajanın açık sekmelerini kapatır.",
+  "mobile.server.browserProfiles.movedNote":
+    "Sitelerdeki oturumlar eski profilde kalır. Taşınan bir ajanın bu sitelerde yeniden oturum açması gerekir.",
   "mobile.server.browserProfiles.clear": "Verileri temizle",
   "mobile.server.browserProfiles.clearTitle": "{name} verileri temizlensin mi?",
   "mobile.server.browserProfiles.clearBody":
@@ -1259,6 +1262,9 @@ export const messages = {
   "mobile.server.mcp.connected": { one: "Bağlandı · {count} araç", other: "Bağlandı · {count} araç" },
   "mobile.server.mcp.signInOnComputer":
     "Bu MCP sunucusu oturum açmanızı istiyor. Bir bilgisayardaki OpenBot'tan oturum açın, sonra yeniden test edin.",
+  "mobile.server.mcp.signIn": "Oturum aç",
+  "mobile.server.mcp.signInHere":
+    "Bu MCP sunucusu oturum açmanızı istiyor. Oturum aç'a dokunun, sonra yeniden test edin.",
   "mobile.server.mcp.signedInDescription": "{server} bu MCP sunucusunda oturum açtı.",
   "mobile.server.mcp.signOut": "Oturumu kapat",
   "mobile.server.mcp.saveFailed": "Değişiklik kaydedilemedi. Tekrar deneyin.",
@@ -1309,6 +1315,7 @@ export const messages = {
   "mobile.server.planLimits.window.fiveHour": "5 saatlik",
   "mobile.server.planLimits.window.hours": { one: "{count} saatlik", other: "{count} saatlik" },
   "mobile.server.planLimits.window.minutes": "{minutes} dk",
+  "mobile.server.planLimits.window.group": "{group} · {window}",
   "mobile.server.settings.updates": "Güncellemeler",
   "mobile.server.settings.updateAvailable": "Güncelleme var",
   "mobile.server.route.updates": "Güncellemeler",
@@ -1678,4 +1685,6 @@ export const messages = {
   "mobile.server.ownerTransfer.acceptFailed": "Devir kabul edilemedi",
   "mobile.server.ownerTransfer.declineFailed": "Devir reddedilemedi",
   "mobile.server.ownerTransfer.tryAgain": "Daha sonra tekrar deneyin.",
+  "mobile.server.providers.updateAll": "Tümünü güncelle",
+  "mobile.server.providers.updateAllFailed": "Bazı güncellemeler başlamadı. Tekrar deneyin.",
 } as const satisfies PartialTranslation<typeof source>;

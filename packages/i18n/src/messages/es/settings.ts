@@ -30,6 +30,8 @@ export const messages = {
   "settings.movingFaces.title": "Caras de agentes en movimiento",
   "settings.movingFaces.description":
     "Las caras de los agentes parpadean y se mueven. Empiezan quietas en un equipo sin GPU.",
+  "settings.startupAnimation.title": "Animación de inicio",
+  "settings.startupAnimation.description": "Muestra la animación de agentes mientras se abre OpenBot.",
   "settings.logoColor.title": "Color del logotipo",
   "settings.logoColor.description": "Se muestra en el Dock, la barra de tareas y Dynamic Island.",
   "settings.logoColor.buildNote":
@@ -59,6 +61,7 @@ export const messages = {
   "settings.chatBackdrop.sunset": "Atardecer retro",
   "settings.chatBackdrop.snowfall": "Nevada",
   "settings.chatBackdrop.fireflies": "Luciérnagas",
+  "settings.chatBackdrop.coast": "Costa de neón",
   "settings.chatBackdrop.upload": "Subir imagen…",
   "settings.chatBackdrop.uploadRefused": "Usa una imagen PNG, JPEG, GIF, WebP o AVIF de 20 MB como máximo.",
   "settings.chatBackdrop.saveFailed": "El fondo no se guardó.",
@@ -753,6 +756,10 @@ export const messages = {
   "settings.voice.talkKey.refused": "Añade otra tecla",
   "settings.voice.talkKey.reset": "Restablecer",
   "settings.voice.live.signIn": "Inicia sesión en Codex con tu cuenta de ChatGPT para usar la voz en directo.",
+  "settings.voice.live.account": "Cuenta",
+  "settings.voice.live.accountAutomatic": "Automática",
+  "settings.voice.live.accountDescription":
+    "La cuenta de ChatGPT que usa la voz en directo. Elige una cuenta cuyo plan incluya voz.",
   "settings.transfer.title": "Trasladar este servidor a otro equipo",
   "settings.transfer.lede": "Tus agentes, sus habilidades, rutinas, recuerdos y archivos van en un solo archivo.",
   "settings.transfer.flow.label": "Cómo funciona una transferencia",

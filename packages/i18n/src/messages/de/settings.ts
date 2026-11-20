@@ -30,6 +30,8 @@ export const messages = {
   "settings.movingFaces.title": "Bewegte Agentengesichter",
   "settings.movingFaces.description":
     "Agentengesichter blinzeln und bewegen sich. Auf einem Computer ohne GPU sind sie anfangs still.",
+  "settings.startupAnimation.title": "Startanimation",
+  "settings.startupAnimation.description": "Zeigt die Agentenanimation, während OpenBot startet.",
   "settings.logoColor.title": "Logofarbe",
   "settings.logoColor.description": "Im Dock, in der Taskleiste und in Dynamic Island.",
   "settings.logoColor.buildNote":
@@ -59,6 +61,7 @@ export const messages = {
   "settings.chatBackdrop.sunset": "Retro-Sonnenuntergang",
   "settings.chatBackdrop.snowfall": "Schneefall",
   "settings.chatBackdrop.fireflies": "Glühwürmchen",
+  "settings.chatBackdrop.coast": "Neonküste",
   "settings.chatBackdrop.upload": "Bild hochladen…",
   "settings.chatBackdrop.uploadRefused": "Verwende ein PNG-, JPEG-, GIF-, WebP- oder AVIF-Bild mit höchstens 20 MB.",
   "settings.chatBackdrop.saveFailed": "Der Fensterhintergrund wurde nicht gespeichert.",
@@ -759,6 +762,10 @@ export const messages = {
   "settings.voice.talkKey.refused": "Füge noch eine Taste hinzu",
   "settings.voice.talkKey.reset": "Zurücksetzen",
   "settings.voice.live.signIn": "Melde dich mit deinem ChatGPT-Konto bei Codex an, um Live-Sprache zu nutzen.",
+  "settings.voice.live.account": "Konto",
+  "settings.voice.live.accountAutomatic": "Automatisch",
+  "settings.voice.live.accountDescription":
+    "Das ChatGPT-Konto, das Live-Sprache nutzt. Wähle ein Konto, dessen Abo Sprache enthält.",
   "settings.transfer.title": "Diesen Server auf einen anderen Computer umziehen",
   "settings.transfer.lede":
     "Deine Agenten mit ihren Fähigkeiten, Routinen, Erinnerungen und Dateien kommen in eine Datei.",

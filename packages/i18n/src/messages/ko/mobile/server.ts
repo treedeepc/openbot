@@ -222,6 +222,7 @@ export const messages = {
   "mobile.server.threads.hold.serverBusy": "대기 중이에요. 호스트는 메모리가 허용하는 만큼만 턴을 실행해요.",
   "mobile.server.threads.hold.agentBusy": "이 에이전트의 다른 작업이 끝나기를 기다리는 중이에요.",
   "mobile.server.threads.hold.oneTurn": "대기 중이에요. 이 에이전트의 제공자는 한 번에 한 턴만 실행해요.",
+  "mobile.server.threads.hold.signIn": "대기 중이에요. 이 에이전트의 제공자에 로그인해야 해요.",
   "mobile.server.threads.offline": "이 서버에 연결하면 스레드를 볼 수 있어요.",
   "mobile.server.threads.loading": "스레드 불러오는 중…",
   "mobile.server.threads.loadFailed": "일부 에이전트의 스레드를 불러올 수 없어요.",
@@ -522,6 +523,8 @@ export const messages = {
   "mobile.server.browserProfiles.addAgents": "에이전트 추가",
   "mobile.server.browserProfiles.agentsHint":
     "탭하면 에이전트에게 이 프로필을 주거나 공유 프로필로 되돌립니다. 변경하면 에이전트의 열린 탭이 닫힙니다.",
+  "mobile.server.browserProfiles.movedNote":
+    "사이트 로그인 정보는 이전 프로필에 남습니다. 옮긴 에이전트는 이 사이트에 다시 로그인해야 합니다.",
   "mobile.server.browserProfiles.clear": "데이터 지우기",
   "mobile.server.browserProfiles.clearTitle": "{name}의 데이터를 지울까요?",
   "mobile.server.browserProfiles.clearBody":
@@ -1209,6 +1212,8 @@ export const messages = {
   "mobile.server.mcp.connected": { other: "연결됨 · 도구 {count}개" },
   "mobile.server.mcp.signInOnComputer":
     "이 MCP 서버는 로그인이 필요해요. 컴퓨터의 OpenBot에서 로그인한 다음 다시 테스트하세요.",
+  "mobile.server.mcp.signIn": "로그인",
+  "mobile.server.mcp.signInHere": "이 MCP 서버는 로그인을 요청합니다. 로그인을 탭한 다음 다시 테스트하세요.",
   "mobile.server.mcp.signedInDescription": "{server}이(가) 이 MCP 서버에 로그인되어 있어요.",
   "mobile.server.mcp.signOut": "로그아웃",
   "mobile.server.mcp.saveFailed": "변경 사항을 저장하지 못했어요. 다시 시도해 주세요.",
@@ -1259,6 +1264,7 @@ export const messages = {
   "mobile.server.planLimits.window.fiveHour": "5시간",
   "mobile.server.planLimits.window.hours": { other: "{count}시간" },
   "mobile.server.planLimits.window.minutes": "{minutes}분",
+  "mobile.server.planLimits.window.group": "{group} · {window}",
   "mobile.server.settings.updates": "업데이트",
   "mobile.server.settings.updateAvailable": "업데이트 가능",
   "mobile.server.route.updates": "업데이트",
@@ -1619,4 +1625,6 @@ export const messages = {
   "mobile.server.ownerTransfer.acceptFailed": "이전을 수락하지 못했어요",
   "mobile.server.ownerTransfer.declineFailed": "이전을 거절하지 못했어요",
   "mobile.server.ownerTransfer.tryAgain": "나중에 다시 시도해 주세요.",
+  "mobile.server.providers.updateAll": "모두 업데이트",
+  "mobile.server.providers.updateAllFailed": "일부 업데이트를 시작하지 못했습니다. 다시 시도하세요.",
 } as const satisfies PartialTranslation<typeof source>;
