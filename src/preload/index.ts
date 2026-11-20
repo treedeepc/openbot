@@ -7,6 +7,7 @@ import {
   decodeAgentAdminSettings,
   decodeAgentBackupModelSettings,
   decodeAgentBrowserProfile,
+  decodeAgentBuiltinMemorySettings,
   decodeAgentDefaultsOverview,
   decodeAgentExclusionChangeFromMain,
   decodeAgentFastModeSettings,
@@ -378,6 +379,7 @@ import {
 import { decodeVaultCodes, decodeVaultImportResult, decodeVaultSecret, decodeVaultState } from "./vault-decoding";
 import {
   decodeWorkflowDetail,
+  decodeWorkflowFoldersSnapshotFromMain,
   decodeWorkflowGitHubCatalog,
   decodeWorkflowGitHubHistory,
   decodeWorkflowGitHubOptions,
@@ -925,6 +927,8 @@ const openbotApi: OpenBotDesktopApi = {
     mediaCredits: decodeWorkflowMediaCredits,
     mediaCatalog: decodeWorkflowMediaCatalog,
     mediaPrice: decodeWorkflowMediaPrice,
+    folders: decodeWorkflowFoldersSnapshotFromMain,
+    folderAction: decodeWorkflowFoldersSnapshotFromMain,
   }),
   crm: bridgeGroup(IPC_ENDPOINTS.crm, {
     overview: decodeCrmOverview,
@@ -1444,6 +1448,8 @@ const openbotApi: OpenBotDesktopApi = {
       unpublishAgentTemplate: decodeVoid,
       getAgentPlanCard: decodeAgentPlanCardSettings,
       updateAgentPlanCard: decodeAgentPlanCardSettings,
+      getAgentBuiltinMemory: decodeAgentBuiltinMemorySettings,
+      updateAgentBuiltinMemory: decodeAgentBuiltinMemorySettings,
       getAgentFastMode: decodeAgentFastModeSettings,
       updateAgentFastMode: decodeAgentFastModeSettings,
       listBrowserProfiles: decodeBrowserProfileList,

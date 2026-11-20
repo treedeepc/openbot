@@ -55,6 +55,7 @@ import type {
 import {
   agentAccessRank,
   agentComputerUseEnabled,
+  agentMemoryEnabled,
   agentNewChatAllowed,
   agentPermissionLevel,
   agentQuickAcknowledgementEnabled,
@@ -112,7 +113,13 @@ import {
   setBackdropToolSchema,
   webSearchToolSchema,
 } from "../openbot-tools";
-import { type AppServerRequest, type DynamicToolCallParams, type DynamicToolResult, isRecord } from "../protocol";
+import {
+  type AppServerRequest,
+  type DynamicToolCallParams,
+  type DynamicToolResult,
+  isRecord,
+  PROVIDER_STOPPED_WAITING,
+} from "../protocol";
 import { handleRoutineFlowTool, type RoutineFlowTools } from "../routine-flows/routine-flow-tools";
 import type { StoredStateFailure } from "../stored-state-effects";
 import type { VaultItems } from "../vault-items";
@@ -268,6 +275,14 @@ function requestAborted(signal: AbortSignal | undefined) {
     return Effect.sync(() => signal?.removeEventListener("abort", abort));
   });
 }
+
+const AGENT_MEMORY_TOOLS: ReadonlySet<string> = new Set([
+  "search_memories",
+  "list_memories",
+  "set_memory_inclusion",
+  "remember",
+  "forget_memory",
+]);
 
 const LISTED_DESCRIPTION_LENGTH = 300;
 
@@ -609,9 +624,11 @@ export class OpenBotToolRouter {
     request: AppServerRequest,
   ) {
     if (request.signal?.aborted) return;
-    request.signal?.addEventListener("abort", () => this.#attention.cancelRequest(client, request.id), {
-      once: true,
-    });
+    request.signal?.addEventListener(
+      "abort",
+      () => this.#attention.cancelRequest(client, request.id, request.signal?.reason === PROVIDER_STOPPED_WAITING),
+      { once: true },
+    );
     const reportFailure = (error: unknown) =>
       Effect.sync(() => {
         if (client.running) {
@@ -1659,6 +1676,11 @@ export class OpenBotToolRouter {
     };
   }
 
+  #memoryEnabled(agentId: string): boolean {
+    const agent = this.#hooks.listAgents().find((candidate) => candidate.id === agentId);
+    return agent === undefined || agentMemoryEnabled(agent);
+  }
+
   #requireAgent(agentId: string): AgentSummary {
     const agents = this.#hooks.listAgents();
     const agent = agents.find((candidate) => candidate.id === agentId);
@@ -2267,6 +2289,10 @@ export class OpenBotToolRouter {
       );
     }
 
+    if (AGENT_MEMORY_TOOLS.has(params.tool) && !this.#memoryEnabled(senderAgentId))
+      return openBotToolFailure(
+        "OpenBot memory is off for you, so this tool does not work. Use a connected memory app instead, or tell the user that they can turn on OpenBot memory in your settings.",
+      );
     const memoryResult = this.#memories.handleTool(
       params,
       senderAgentId,

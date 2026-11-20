@@ -4,6 +4,7 @@ import { AGENT_ACCESS_CODECS } from "./agent-access-v1";
 import { AGENT_ACTIVE_QUEUES_CODECS } from "./agent-active-queues-v1";
 import { AGENT_ADMIN_CODECS } from "./agent-admin-v1";
 import { AGENT_BACKUP_MODELS_CODECS } from "./agent-backup-models-v1";
+import { AGENT_BUILTIN_MEMORY_CODECS } from "./agent-builtin-memory-v1";
 import { AGENT_COLORS_CODECS } from "./agent-colors-v1";
 import { AGENT_DEFAULTS_CODECS } from "./agent-defaults-v1";
 import { AGENT_FAST_MODE_CODECS } from "./agent-fast-mode-v1";
@@ -162,6 +163,7 @@ import { WEBHOOK_TESTS_CODECS } from "./webhook-tests-v1";
 import { WHATSAPP_CONNECTOR_CODECS } from "./whatsapp-connector-v1";
 import { WHATSAPP_STATUS_REACTIONS_CODECS } from "./whatsapp-status-reactions-v1";
 import { WHATSAPP_WORKING_MESSAGE_CODECS } from "./whatsapp-working-message-v1";
+import { WORKFLOW_FOLDERS_CODECS } from "./workflow-folders-v1";
 import { WORKFLOWS_GITHUB_CODECS } from "./workflows-github-v1";
 import { WORKFLOWS_HIGGSFIELD_CODECS } from "./workflows-higgsfield-v1";
 import { WORKFLOWS_MEDIA_CATALOG_CODECS } from "./workflows-media-catalog-v1";
@@ -312,6 +314,7 @@ const CODECS: ReadonlyMap<string, OptionalRouteCodec> = new Map([
   ...AGENT_NOTIFICATION_LEVELS_CODECS,
   ...SIDEBAR_PINS_CODECS,
   ...AGENT_PLAN_CARD_CODECS,
+  ...AGENT_BUILTIN_MEMORY_CODECS,
   ...AGENT_DEFAULTS_CODECS,
   ...BROWSER_USER_CONTROL_CODECS,
   ...BROWSER_TEACH_CODECS,
@@ -341,6 +344,7 @@ const CODECS: ReadonlyMap<string, OptionalRouteCodec> = new Map([
   ...WORKFLOWS_STEP_SETTINGS_CODECS,
   ...SIDEBAR_FOLDERS_CODECS,
   ...LIBRARY_FOLDERS_CODECS,
+  ...WORKFLOW_FOLDERS_CODECS,
   ...VAULT_CODECS,
   ...BROWSER_SECRET_VAULT_CODECS,
   ...VAULT_IMPORT_CODECS,

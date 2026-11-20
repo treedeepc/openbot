@@ -349,6 +349,8 @@ export const messages = {
   "error.backend.libraryFolderOtherAgent": "ファイルは、そのエージェントのフォルダーにのみ入れられます。",
   "error.backend.libraryFolderMoveInvalid": "このフォルダーはそこへ移動できません。",
   "error.backend.libraryImportHidden": "非表示の項目はインポートされません。",
+  "error.backend.workflowFolderLimit": "1 つのサーバーに置けるワークフローのフォルダーは {limit} 個までです。",
+  "error.backend.workflowFolderPlacementLimit": "フォルダー内のワークフローが多すぎます。",
   "error.backend.sectionNameDuplicate": "セクション名は重複しないようにしてください。",
   "error.backend.directMessageRequired": "先にメッセージを入力してください。",
   "error.backend.directMessageTooLong": "ダイレクトメッセージは {limit} 文字までです。",

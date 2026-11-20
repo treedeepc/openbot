@@ -336,6 +336,8 @@ export const messages = {
   "error.backend.libraryFolderOtherAgent": "Файл можно поместить только в папку его агента.",
   "error.backend.libraryFolderMoveInvalid": "Эту папку нельзя туда переместить.",
   "error.backend.libraryImportHidden": "Скрытые элементы не импортируются.",
+  "error.backend.workflowFolderLimit": "На сервере может быть не более {limit} папок рабочих процессов.",
+  "error.backend.workflowFolderPlacementLimit": "В папках слишком много рабочих процессов.",
   "error.backend.sectionNameDuplicate": "Названия разделов должны быть уникальными.",
   "error.backend.directMessageRequired": "Сначала напишите сообщение.",
   "error.backend.directMessageTooLong": "Личное сообщение может содержать не более {limit} символов.",

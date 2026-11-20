@@ -26,13 +26,11 @@ import {
   storageTierOf,
 } from "@openbot/contracts/billing";
 import type { BillingDetails, BillingDetailsRequest } from "@openbot/contracts/billing-details";
-import {
-  type HostedServerCatalog,
-  type HostedServerCatalogPlan,
-  type HostedServerEntryPoint,
-  type HostedServerPlanPrices,
-  type HostedServerSize,
-  hostedServerStorageGb,
+import type {
+  HostedServerCatalog,
+  HostedServerCatalogPlan,
+  HostedServerEntryPoint,
+  HostedServerPlanPrices,
 } from "@openbot/contracts/hosted-servers";
 import {
   LICENSE_METADATA,
@@ -66,7 +64,13 @@ import {
 import type { BillingOss } from "./billing-oss";
 import { type BillingPurchase, purchaseEvent, reportPurchase, subscriptionEnd } from "./billing-purchase";
 import { BillingReferral } from "./billing-referral";
-import { type BillingSales, type BillingSalesSynced, paymentReversal, withoutTax } from "./billing-sales";
+import {
+  type BillingSales,
+  type BillingSalesSynced,
+  isDisputeInquiry,
+  paymentReversal,
+  withoutTax,
+} from "./billing-sales";
 import { billingDetailsOf, checkoutCountryMismatch, checkoutTax, setCustomerBillingDetails } from "./billing-tax";
 import type { HostedFailure } from "./hosted-server-service";
 import {
@@ -97,6 +101,7 @@ import {
   subscriptionPaymentMethodId,
   subscriptionPeriodEnd,
   subscriptionServerItem,
+  subscriptionStartedAt,
   subscriptionStorageItem,
   subscriptionStorageTier,
   verifyStripeSignature,
@@ -106,6 +111,7 @@ import { ViesClient } from "./vies-client";
 const WEBHOOK_EVENT_RETENTION_MS = 7 * 24 * 60 * 60_000;
 const WELCOME_EMAIL_CLAIM_PREFIX = "openbot_welcome_email:";
 const SERVER_ID_PATTERN = /^[A-Za-z0-9:_-]{1,128}$/u;
+const DISPUTE_DELETES_SERVER_MS = 30 * 24 * 60 * 60 * 1000;
 const LAPSED_PLAN_GRACE_MS = 24 * 60 * 60 * 1000;
 const LAPSED_PLAN_READ_INTERVAL_MS = 60 * 60 * 1000;
 const LAPSED_PLAN_BATCH_SIZE = 20;
@@ -132,7 +138,6 @@ interface ServerPlanRow {
   current_period_end: number | null;
   cancel_at_period_end: number;
   on_operator_host: number;
-  server_size: HostedServerSize | null;
   storage_tier: number;
 }
 
@@ -203,6 +208,7 @@ interface SyncedSubscription {
   latestInvoiceId: string | null;
   serverId: string | null;
   ended: boolean;
+  startedAt: number | null;
 }
 
 export interface CheckoutRequest {
@@ -317,7 +323,7 @@ export class BillingService {
         }
         const entry: HostedServerCatalogPlan = {
           id: plan.id,
-          diskGb: plan.storageGb,
+          diskGb: storageTierGb(plan.id, 0),
           memberLimit: plan.memberLimit,
           relativeSpeed: plan.relativeSpeed,
           prices: planPrices,
@@ -783,7 +789,6 @@ export class BillingService {
                 `SELECT s.stripe_subscription_id, s.server_id, h.name AS server_name, s.plan, s.interval, s.currency,
                   s.amount, s.status, s.current_period_end, s.cancel_at_period_end,
                   hs.operator_host IS NOT NULL AS on_operator_host,
-                  CASE WHEN hs.provider_template IS NULL THEN NULL ELSE COALESCE(hs.pending_size, hs.size) END AS server_size,
                   COALESCE(hs.storage_tier, 0) AS storage_tier
            FROM billing_subscriptions s
            LEFT JOIN remote_hosts h ON h.host_id = s.server_id AND ${subscriptionPaysForOwnerSql("s", "h.owner_user_id")}
@@ -952,15 +957,19 @@ export class BillingService {
         ? yield* this.#stripeCall(() => dependencies.stripe.getPaymentInvoice(reversal.paymentIntentId))
         : null;
       const subscriptionId = eventSubscriptionId(event) ?? payment?.subscriptionId ?? null;
-      const synced = subscriptionId ? yield* this.#syncSubscription(subscriptionId) : null;
+      let synced = subscriptionId ? yield* this.#syncSubscription(subscriptionId) : null;
       if (reversal?.type === "payment_disputed" && payment && synced) {
         yield* this.cancelSubscription(payment.subscriptionId);
-        yield* this.#syncSubscription(payment.subscriptionId);
+        synced = yield* this.#syncSubscription(payment.subscriptionId);
       }
       if (synced?.kind === "plan" && synced.ended && synced.serverId && dependencies.onServerRefunded) {
         const invoiceId = synced.latestInvoiceId;
         const refunded =
           reversal?.type === "payment_refunded" ||
+          (reversal?.type === "payment_disputed" &&
+            !isDisputeInquiry(event) &&
+            synced.startedAt !== null &&
+            event.created * 1_000 - synced.startedAt < DISPUTE_DELETES_SERVER_MS) ||
           (event.type === "customer.subscription.deleted" &&
             invoiceId !== null &&
             (yield* this.#stripeCall(() => dependencies.stripe.isInvoiceRefunded(invoiceId))));
@@ -1127,6 +1136,7 @@ export class BillingService {
       latestInvoiceId: subscriptionLatestInvoiceId(subscription),
       serverId,
       ended: subscription.status === "canceled",
+      startedAt: subscriptionStartedAt(subscription),
     };
     const finish = Effect.andThen(
       ordersLicense(subscription) ? this.license.splitOrder(subscription, ownerId) : Effect.void,
@@ -1416,7 +1426,7 @@ function serverPlan(row: ServerPlanRow, prices: ReadonlyMap<string, StripePrice>
     status: row.status,
     currentPeriodEnd: row.current_period_end,
     cancelAtPeriodEnd: row.cancel_at_period_end === 1,
-    storageGb: hostedServerStorageGb(row.plan, row.on_operator_host === 1, row.server_size, storageTier),
+    storageGb: storageTierGb(row.plan, storageTier),
     ...(canBuyStorage(row)
       ? { storageUpgrades: storageUpgrades(row.plan, row.interval, row.currency, storageTier, row.amount, prices) }
       : {}),

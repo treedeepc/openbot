@@ -32,10 +32,11 @@ that server with no page. The server list sends the limit as
 server list (Settings on desktop, Billing on the web) to delete a server. Each server
 has its own Stripe plan. Its machine comes from the plan: a pool machine of the plan (Starter VPS 1,
 Standard VPS 2, Pro VPS 3), or when none is free, a boat sandbox (`HOSTED_BOAT_PLAN_SIZE`): Starter and
-Standard are `default`, and Pro is `large`. Starter sandboxes from before 2026-11-14 are `small` and keep
-12 GB of storage until a change of plan or billing interval moves them to the new Starter price and to
-`default`. Before the boat claim the row has no machine (`provider_template` is NULL), so the storage that
-the server list and Billing show is the plan storage, not the disk of `size`. `leaseweb-pool.ts move` puts a Starter sandbox on a VPS 1 and sets the row to
+Standard are `default`, and Pro is `large`. Starter sandboxes from before 2026-11-14 are `small` until a
+change of plan or billing interval moves them to the new Starter price and to `default`. Each server
+shows the storage of its plan and storage tier (`storageTierGb`), on a VPS and on boat. The disk of a
+boat type can be smaller than the plan storage. A server on boat moves to a VPS, so the plan storage
+does not depend on the machine. Developer decision, 2026-11-20. `leaseweb-pool.ts move` puts a Starter sandbox on a VPS 1 and sets the row to
 `HOSTED_PLAN_SIZE`.
 
 ## Parts
@@ -282,8 +283,12 @@ when a server is idle or boat stops a sandbox; and `error` and `deleted`. The Wo
    plan of the server, such as a renewal paid just now, keeps it. A cancel at the period end after a
    refund of that period also deletes the server when the period ends. A refund that fails after it
    succeeded does not bring the server back. A dispute (`charge.dispute.created`, an inquiry too)
-   cancels the plan of the disputed invoice now, so Stripe does not charge that card again. After a
-   dispute the server stops with `plan_ended` and keeps its disk. The Worker finds the plan through
+   cancels the plan of the disputed invoice now, so Stripe does not charge that card again. When the
+   subscription started less than 30 days before the dispute (Stripe `start_date`,
+   `DISPUTE_DELETES_SERVER_MS`), the webhook also deletes the server at once, as for a refund. An
+   inquiry (a dispute `status` that starts with `warning_`, `isDisputeInquiry`) takes no money back,
+   so it never deletes the server. After an inquiry or a later dispute the server stops with
+   `plan_ended` and keeps its disk for 14 days. The Worker finds the plan through
    the invoice of the PaymentIntent (`GET /v1/invoice_payments`). A refund or dispute of a payment
    that is not an OpenBot plan invoice changes nothing.
 8. **Plan change.** The Customer Portal has no plan change (`subscription_update` is off), so only an
@@ -1200,8 +1205,8 @@ A machine of the pool is not the boat image:
   server downloads the CLI of each provider that an agent uses and that is not off. The user
   downloads the CLI of another provider in OpenBot.
 - It has no Docker and no boat desktop. OpenBot uses its own virtual displays.
-- It shows the storage of a moved server (25, 75 and 150 GB), which is more than the plan table of
-  the pricing page.
+- It shows the storage of the plan (25, 75 and 150 GB), the same numbers as the pricing page
+  (`storageTierGb`).
 - The clients show no restart action, and the server does not stop when it is not in use.
 
 Measured on the test Worker with a real Leaseweb VPS 2 (smoke, 2026-11-13): `prepare` of a clean
@@ -1477,14 +1482,14 @@ The VPS is not the same machine as the sandbox:
 - The clients show no restart action for a moved server: the server list of the account service has
   `restartAvailable: false` for it. A client from before this field shows the action and gets the
   refusal of the Worker.
-- A moved server has more storage: 25, 75 and 150 GB for Starter, Standard and Pro
-  (`OPERATOR_HOST_STORAGE_GB`), not the 12, 50 and 100 GB of the plan table. The account service
-  sends the number in the server list, the hosting list and the billing state from the moment of the
-  row `UPDATE`, so the storage meter, the storage alerts, Billing and the plan change offer show it.
-  The host reads it at its start, for the instructions of its agents. The pricing page and the order
-  form keep the plan table, because a new server can start in a boat sandbox. A client or a host from
-  before this number shows the plan table. A rollback gives the server the plan table again, so a
-  server that used more on the VPS shows a full disk.
+- Each server has the storage of its plan: 25, 75 and 150 GB for Starter, Standard and Pro
+  (`BILLING_PLANS`, and `storageTierGb` with a storage tier). The account service sends the number in
+  the server list, the hosting list and the billing state, so the storage meter, the storage alerts,
+  Billing and the plan change offer show it. The host reads it at its start, for the instructions of
+  its agents. The pricing page and the order form show the same numbers. Before 2026-11-20 a server in
+  a boat sandbox showed 12, 50 or 100 GB, limited by the disk of its boat type; now it shows the plan
+  storage, also when the boat disk is smaller. A client or a host from before this number shows the
+  plan table.
 - The number is not a limit that the machine enforces. A host with `storage-user-files-v1` measures
   the files of its user (the home folder, `/tmp` and `/var/tmp`) with `du`, and the clients show the
   plan minus that number. A host from before that capability gets the boat count: the clients
@@ -1530,8 +1535,7 @@ reads only the output between two markers that the command writes.
 
 `move` sets `size` to `HOSTED_PLAN_SIZE` (`small` for Starter), so the statement writes the boat type of
 the sandbox again: the `type` that boat shows for the sandbox (`default` for a Starter sandbox from
-2026-11-14 or later, `small` before). Without it, a Starter row on a `default` sandbox shows 12 GB of
-storage and an almost full disk.
+2026-11-14 or later, `small` before).
 
 ```sql
 UPDATE hosted_servers SET provider_sandbox_id = retired_sandbox_id, retired_sandbox_id = NULL,
@@ -1865,6 +1869,8 @@ Each message is one line: an emoji and a bold word for the event, then the parts
 | A purchase takes a machine and leaves 0 or 1 free machines of that product in that location | `🔴 **Pool** <location> <product> · 0 free left` (`🟠` for 1) | Buy and `prepare` machines. |
 | A server starts on boat: no ready machine, the pool query failed, or its pool machine did not start it | `⛵ **Boat start** · <plan> server · <currency> · <server ID prefix> · <reason>` | `move` it when a machine is ready. `leaseweb-pool.ts boat` lists it. |
 | A pool start is lost (no sign-in in 4 minutes) | `🛠️ **Pool start lost** · <plan> server · <server ID prefix> · machine <host ID> · prepare it again` | `prepare --reinstall` the machine. |
+| `sync` puts the data of an ended plan in B2 and frees its machine | ``📦 **Archived** · <plan> server · `<email>` · <server ID prefix> · <size> in B2 · VPS <VPS ID> free · <cancelled or payment failed> · <time>`` | `prepare` the machine. |
+| A machine reports a finished restore | `♻️ **Restored** · <plan> server · <server ID prefix> · machine <host ID> · <time>` | None. |
 | A server plan starts (a new subscription) | ``🆕 **New** server · `<email>` · <plan> · <amount>`` | None. |
 | A license starts (a new subscription) | ``🆕 **New** license · `<email>` · <tier> · <n> users · <amount>`` | None. |
 | A subscription starts with a free trial | ``🧪 **Trial** <server or license> · `<email>` · ...`` | None. |
@@ -1874,9 +1880,10 @@ Each message is one line: an emoji and a bold word for the event, then the parts
 | A paid Checkout page has a billing address in another country than the saved billing country | `🧾 **VAT check** · Checkout page <session ID> took the VAT of <country> (<treatment>), but its billing address is in <country>. ...` | Check the VAT of its invoice. |
 | Paid sales to consumers in other EU countries reach EUR 9,000 (net) in a calendar year, once a year | `🧾 **VAT limit** · in <year>, sales to consumers in other EU countries reached <amount> (net). ...` | Register for the EU One Stop Shop and charge the VAT of the buyer's country before EUR 10,000. |
 
-A purchase message (the 6 rows with an email) and a payment message (below) have the email of the
-account, on a developer decision, so keep the webhook in a private channel. A pool message has no
-account, email or name. A VAT message is the text of its log line with the emoji; the log line stays
+A purchase message (the 6 rows with an email), the `Archived` message and a payment message (below)
+have the email of the account, on a developer decision, so keep the webhook in a private channel.
+`Archived` comes from `leaseweb-pool.ts sync`, not from the Worker, and shows `unknown account` when
+the account is gone. The other pool messages have no account, email or name. A VAT message is the text of its log line with the emoji; the log line stays
 plain.
 
 The same webhook also gets one payment message for each invoice line of a server plan or a license
@@ -1914,7 +1921,8 @@ date of the cancel message. One sync sends one message: a cancel that Stripe sto
 change of plan or users sends no cancel message. A change of plan or users sends no purchase message.
 A server order with a license sends two messages, one for each subscription. A subscription that ends
 after its owner cancelled the renewal sends the cancel message and, later, the end message. A deleted
-server and a dispute end the plan at once. The reason is `not paid` when the last
+server and a dispute end the plan at once; a dispute in the first 30 days of the subscription also
+deletes the server. The reason is `not paid` when the last
 payment of the plan had failed, and `cancelled` in each other case. The boat message goes out only
 after the Worker stores the boat start, so a lost race, a retry of a boat attempt, or a pool change
 whose answer was lost sends nothing. A failed send logs one line and is not sent again. Without the
@@ -1943,10 +1951,10 @@ These were not tested on boat. Test them before a user gets access:
   must check the key before a user deletes the server;
 - the vCPU, memory and disk of boat `large`;
 - a downgrade that boat refuses with `type_too_small`. The test uses a fake boat;
-- the disk of each size. The root file system showed 69 GB on `small` and on `default`, not the 12 GB
-  and 50 GB of the boat machine table. The limit that `type_too_small` uses is not known. The plans
-  show 12, 50 and 100 GB, which is not more than the machine table. The disk of `large` was not
-  measured, so the 100 GB of Pro is not confirmed;
+- the disk of each size. The root file system showed 69 GB on `small` and on `default`. The boat
+  page lists 51 GB for `small` and `default` and 111 GB for `large`. The limit that `type_too_small`
+  uses is not known. A server on boat shows the plan storage (75 GB for Standard, 150 GB for Pro),
+  which is more than the boat disk; it moves to a VPS;
 - that boat frees the key of a refused create, so a retry of a setup that failed works;
 - the menu path of the Stripe failed-payment setting in [Production](#production), and whether test
   mode and live mode keep separate values;

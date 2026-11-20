@@ -25,6 +25,7 @@ import type {
   AddedAgent,
   AgentAdminSettings,
   AgentBackupModelSettings,
+  AgentBuiltinMemorySettings,
   AgentDefaultsOverview,
   AgentFastModeSettings,
   AgentHostSettings,
@@ -33,6 +34,7 @@ import type {
   SetAgentDefaultChoiceInput,
   UpdateAgentAdminSettingsInput,
   UpdateAgentBackupModelsInput,
+  UpdateAgentBuiltinMemoryInput,
   UpdateAgentDefaultsInput,
   UpdateAgentFastModeInput,
   UpdateAgentHostSettingsInput,
@@ -624,6 +626,7 @@ import type {
   VoiceTranscriptionInput,
   VoiceTranscriptionResult,
 } from "./ipc-voice";
+import type { WorkflowFolderAction, WorkflowFoldersSnapshot } from "./ipc-workflow-folders";
 import type {
   WorkflowGitHubCatalog,
   WorkflowGitHubHistory,
@@ -1648,6 +1651,8 @@ export const IPC_ENDPOINTS = {
     mediaCredits: scopedQuery<WorkflowMediaCredits>()("workflows:media-credits"),
     mediaCatalog: scopedQuery<WorkflowMediaCatalog>()("workflows:media-catalog"),
     mediaPrice: scopedRequest<WorkflowMediaPriceRequest, WorkflowMediaPrice>()("workflows:media-price"),
+    folders: scopedQuery<WorkflowFoldersSnapshot>()("workflows:folders"),
+    folderAction: scopedRequest<WorkflowFolderAction, WorkflowFoldersSnapshot>()("workflows:folder-action"),
   },
   crm: {
     overview: scopedQuery<CrmOverview>()("crm:overview"),
@@ -1802,6 +1807,10 @@ export const IPC_ENDPOINTS = {
     getAgentPlanCard: scopedRequest<string, AgentPlanCardSettings>()("agent:admin:get-plan-card"),
     updateAgentPlanCard: scopedRequest<UpdateAgentPlanCardInput, AgentPlanCardSettings>()(
       "agent:admin:update-plan-card",
+    ),
+    getAgentBuiltinMemory: scopedRequest<string, AgentBuiltinMemorySettings>()("agent:admin:get-builtin-memory"),
+    updateAgentBuiltinMemory: scopedRequest<UpdateAgentBuiltinMemoryInput, AgentBuiltinMemorySettings>()(
+      "agent:admin:update-builtin-memory",
     ),
     getAgentFastMode: scopedRequest<string, AgentFastModeSettings>()("agent:admin:get-fast-mode"),
     updateAgentFastMode: scopedRequest<UpdateAgentFastModeInput, AgentFastModeSettings>()(

@@ -896,8 +896,8 @@ export class TurnLifecycle {
       logger.info("A turn's last narration became its answer.", { agentId, turnId, provider: source.provider });
       return false;
     }
-    if (deliveries.every(({ delivery }) => this.#mailbox.repeatsHandledReply(delivery.id))) {
-      logger.info("A turn for a repeated teammate result ended quietly.", {
+    if (deliveries.every(({ delivery }) => this.#mailbox.answersHandledRequest(delivery.id))) {
+      logger.info("A turn for another teammate result to a handled request ended quietly.", {
         agentId,
         turnId,
         provider: source.provider,
@@ -2201,15 +2201,27 @@ export class TurnLifecycle {
         running !== undefined &&
         !channelTurn &&
         !routineSession &&
-        (!taskTurn || laneTaskId !== null)
+        (!taskTurn || laneTaskId !== null) &&
+        !this.#mailbox.awaitsTeammate(
+          agentId,
+          laneTaskId,
+          new Set([
+            turnId,
+            ...deliveries.flatMap(({ resumeAfterUsageLimit, planContinuation }) => [
+              ...(resumeAfterUsageLimit?.previousTurnIds ?? []),
+              ...(planContinuation?.turnIds ?? []),
+            ]),
+          ]),
+        )
           ? this.#planContinues(agentId, laneTaskId, turnId, deliveries, latestAssistant?.text)
           : "no";
       const continueMode: FinishCheckMode =
         planMode !== "no" &&
         (taskStarted ||
-          (yield* (running?.client.wakesAfterBackgroundWork?.(threadId) ?? Effect.succeed(false)).pipe(
-            Effect.orElseSucceed(() => false),
-          )))
+          (running?.startedBackgroundWork === true &&
+            (yield* (running.client.wakesAfterBackgroundWork?.(threadId) ?? Effect.succeed(false)).pipe(
+              Effect.orElseSucceed(() => false),
+            ))))
           ? "no"
           : planMode;
       const turnPlan = snapshot.messages.find((message) => message.id === `${turnId}:plan`)?.plan ?? null;

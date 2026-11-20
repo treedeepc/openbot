@@ -5,7 +5,11 @@ import { homedir, hostname, tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { createInterface } from "node:readline";
 import type { Readable } from "node:stream";
-import { isManagedRuntimeProvider, type ManagedProviderId } from "@openbot/contracts/agent-providers";
+import {
+  isKeyOnlyProvider,
+  isManagedRuntimeProvider,
+  type ManagedProviderId,
+} from "@openbot/contracts/agent-providers";
 import { leadingAddress } from "@openbot/contracts/chat-tag-references";
 import { selfHostedApiOrigin } from "@openbot/contracts/invite-links";
 import type {
@@ -25,6 +29,7 @@ import type {
 } from "@openbot/contracts/ipc";
 import {
   agentBrowserProfile,
+  agentMemoryEnabled,
   type ChannelCommand,
   DEFAULT_APP_LANGUAGE,
   DEFAULT_DYNAMIC_ISLAND_PREFERENCE,
@@ -119,6 +124,7 @@ import { StorageUsageScanner, StorageUsageService } from "../backend/storage-usa
 import { TeamChatStore } from "../backend/team-chat-store";
 import { UserBrowsingLog } from "../backend/user-browsing-log";
 import { UserFilesBytes } from "../backend/user-files-bytes";
+import { WORKFLOW_FOLDERS_FILE, WorkflowFoldersStore } from "../backend/workflow-folders-store";
 import { clearFlatBackground } from "../backend/workflows/flat-background";
 import { WorkflowGitHubStore } from "../backend/workflows/workflow-github-store";
 import { WorkflowRunStore } from "../backend/workflows/workflow-run-store";
@@ -473,6 +479,7 @@ import { spawnVoiceTranscriptionHost } from "./voice-transcription-host-process"
 import { VoiceTranscriptionService } from "./voice-transcription-service";
 import { WebhookRelay } from "./webhook-relay";
 import { WindowsTopmostKeeper } from "./windows-topmost-keeper";
+import { WorkflowFoldersService } from "./workflow-folders-service";
 import { sizeWorkflowPicture } from "./workflow-picture-size";
 
 const logger = createOpenBotLogger("application-services");
@@ -651,6 +658,7 @@ export interface ApplicationServices {
   mailbox: MailboxStore;
   storageUsage: StorageUsageService;
   libraryFoldersService: LibraryFoldersService;
+  workflowFoldersService: WorkflowFoldersService;
   browser: BrowserHost;
   browserPictureInPicture: BrowserPictureInPicture;
   localSignIn: LocalSignInWindows;
@@ -824,6 +832,7 @@ async function createMessagingServices({
     agents: {
       listAgents: () => service.listAgents(),
       respondToApproval: (input) => service.respondToApproval(input, { owner: false }),
+      approvalExecutionThreadId: (requestId) => service.approvalExecutionThreadId(requestId),
       onEvent: (listener) => {
         service.on("event", listener);
         return () => service.off("event", listener);
@@ -1241,6 +1250,8 @@ export async function createApplicationServices({
   await runCauseEffect(sidebarLayout.initialize());
   const libraryFolders = new LibraryFoldersStore(join(app.getPath("userData"), LIBRARY_FOLDERS_FILE));
   await runCauseEffect(libraryFolders.initialize());
+  const workflowFolders = new WorkflowFoldersStore(join(app.getPath("userData"), WORKFLOW_FOLDERS_FILE));
+  await runCauseEffect(workflowFolders.initialize());
   const mailbox = new MailboxStore(app.getPath("userData"), store.sharedRoot, store.database);
   await runCauseEffect(mailbox.initialize());
   configureApplicationProtocol();
@@ -1304,11 +1315,15 @@ export async function createApplicationServices({
   let agentBrowserProfiles: BrowserProfileService | null = null;
   let crmHandle: CrmHandle | null = null;
   const agentThreads = new AgentThreadStore(store.database);
+  const agentMemoryOn = (agentId: string) => {
+    const agent = store.get(agentId);
+    return agent === undefined || agentMemoryEnabled(agent);
+  };
   const browser = new BrowserHost(mainWindow, store.downloadsRoot, join(app.getPath("userData"), BROWSER_STATE_FILE), {
     memoryLow: () => (hostMemory?.level() ?? "ok") !== "ok",
     ...(hostMemory ? { tabLimit: () => hostMemory.browserTabLimit() } : {}),
     browserProfile: (agentId) => {
-      const agent = store.list().find((candidate) => candidate.id === agentId);
+      const agent = store.get(agentId);
       return agent ? agentBrowserProfile(agent) : { kind: "shared" };
     },
     profileExists: (profileId) => browserProfileStore.get(profileId) !== undefined,
@@ -1319,13 +1334,15 @@ export async function createApplicationServices({
     quitShortcut: (input) => windows.handleQuitShortcut(mainWindow, input),
     pagePreload: join(__dirname, "../preload/browserPage.cjs"),
     siteMemories: (agentId, hostname) =>
-      siteMemoryStore
-        .forHost(agentId, hostname)
-        .flatMap(({ id, site, text }) => (site ? [{ id, site, text: redactSecrets(text) }] : [])),
+      agentMemoryOn(agentId)
+        ? siteMemoryStore
+            .forHost(agentId, hostname)
+            .flatMap(({ id, site, text }) => (site ? [{ id, site, text: redactSecrets(text) }] : []))
+        : [],
     userBrowsing: {
       enabled: () => browsingMemory.get().enabled,
       record: (agentId, step) => {
-        Effect.runFork(userBrowsing.record(agentId, step));
+        if (agentMemoryOn(agentId)) Effect.runFork(userBrowsing.record(agentId, step));
       },
     },
     hideFromWindowSwitchers: hidePanelFromWindowSwitchers,
@@ -2296,6 +2313,7 @@ export async function createApplicationServices({
       runEnded: (end) => service.notifyWorkflowRunEnded(end),
     }),
   );
+  const workflowFoldersService = new WorkflowFoldersService({ store: workflowFolders, workflows: workflowRuntime });
   workflowTriggers = new WorkflowTriggers({
     store: workflowStore,
     timezone: () => serverTimezone.effective(),
@@ -2475,6 +2493,7 @@ export async function createApplicationServices({
   performance.mark("openbot:services.messaging");
   await runCauseEffect(sidebarLayout.reconcileAgents(service.sidebarChatIds()));
   libraryFolders.onChanged(() => service.notifyLibraryFoldersChanged());
+  workflowFolders.onChanged(() => service.notifyWorkflowFoldersChanged());
   await runCauseEffect(libraryFolders.reconcileAgents(new Set(service.listAgents().map((agent) => agent.id))));
   await runCauseEffect(
     libraryFolders.reconcileFiles(new Set(mailbox.listStoredFiles().map((stored) => stored.attachment.id))),
@@ -2500,7 +2519,10 @@ export async function createApplicationServices({
   };
   const trackSystemCliVersions = (status: AgentStatus): void => {
     let copyInUse = false;
-    const agentProviders = hostedServer === null ? null : new Set(service.listAgents().map((agent) => agent.provider));
+    const agentProviders =
+      hostedServer === null
+        ? null
+        : new Set(service.listAgents().map((agent) => (isKeyOnlyProvider(agent.provider) ? "pi" : agent.provider)));
     for (const provider of status.providers ?? []) {
       if (!isManagedRuntimeProvider(provider.id)) continue;
       const version = provider.cliSource === "system" ? (provider.version ?? null) : null;
@@ -3060,6 +3082,7 @@ export async function createApplicationServices({
     providerSignOut: service,
     storage: storageUsage,
     libraryFolders: libraryFoldersService,
+    workflowFolders: workflowFoldersService,
     machine: machineAlerts,
     backgroundProcesses: {
       list: () => listBackgroundProcesses(process.platform, service.listAgents()),
@@ -4146,6 +4169,7 @@ export async function createApplicationServices({
     mailbox,
     storageUsage,
     libraryFoldersService,
+    workflowFoldersService,
     browser,
     browserPictureInPicture,
     localSignIn,

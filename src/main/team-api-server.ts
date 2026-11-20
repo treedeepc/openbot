@@ -35,6 +35,7 @@ import { AGENT_ACCESS_CAPABILITY } from "@openbot/contracts/team-protocol/agent-
 import { AGENT_ACTIVE_QUEUES_CAPABILITY } from "@openbot/contracts/team-protocol/agent-active-queues-v1";
 import { AGENT_BACKGROUND_WORK_CAPABILITY } from "@openbot/contracts/team-protocol/agent-background-work-v1";
 import { AGENT_BACKUP_MODELS_CAPABILITY } from "@openbot/contracts/team-protocol/agent-backup-models-v1";
+import { AGENT_BUILTIN_MEMORY_CAPABILITY } from "@openbot/contracts/team-protocol/agent-builtin-memory-v1";
 import { AGENT_COLORS_CAPABILITY } from "@openbot/contracts/team-protocol/agent-colors-v1";
 import { AGENT_CREATE_OPERATION_CAPABILITY } from "@openbot/contracts/team-protocol/agent-create-operation-v1";
 import { AGENT_DEFAULTS_CAPABILITY } from "@openbot/contracts/team-protocol/agent-defaults-v1";
@@ -185,6 +186,7 @@ import {
   WHATSAPP_CONNECTOR_CAPABILITY,
   WHATSAPP_STATUS_REACTIONS_CAPABILITY,
   WHATSAPP_WORKING_MESSAGE_CAPABILITY,
+  WORKFLOW_FOLDERS_CAPABILITY,
   WORKFLOWS_AGENT_FILES_CAPABILITY,
   WORKFLOWS_CAPABILITY,
   WORKFLOWS_CHANNELS_CAPABILITY,
@@ -342,6 +344,7 @@ import { routeAgentActiveQueues } from "./team-api/route-agent-active-queues";
 import {
   routeAgentAdmin,
   routeAgentBackupModels,
+  routeAgentBuiltinMemory,
   routeAgentDefaults,
   routeAgentFastMode,
   routeAgentHostSettings,
@@ -477,6 +480,7 @@ import { routeVaultImport } from "./team-api/route-vault-import";
 import { routeWhatsAppConnector } from "./team-api/route-whatsapp-connector";
 import { routeWhatsAppStatusReactions } from "./team-api/route-whatsapp-status-reactions";
 import { routeWhatsAppWorkingMessage } from "./team-api/route-whatsapp-working-message";
+import { routeWorkflowFolders } from "./team-api/route-workflow-folders";
 import { routeWorkflows } from "./team-api/route-workflows";
 import { routeWorkspaceDirectory } from "./team-api/route-workspace-directory";
 import { TeamStoreError } from "./team-store";
@@ -1196,6 +1200,7 @@ export class TeamApiServer {
       if ((await routeAgentTaskLimit(context, this.#options.admin, hidden)) === "handled") return;
       if ((await routeAgentNewChat(context, this.#options.admin, hidden)) === "handled") return;
       if ((await routeAgentPlanCard(context, this.#options.admin, hidden)) === "handled") return;
+      if ((await routeAgentBuiltinMemory(context, this.#options.admin, hidden)) === "handled") return;
       if ((await routeAgentDefaults(context, this.#options.admin, hidden)) === "handled") return;
       if ((await routeAgentFastMode(context, this.#options.admin, hidden)) === "handled") return;
       if ((await routeAgentSpeed(context, this.#options.admin, hidden)) === "handled") return;
@@ -1348,6 +1353,16 @@ export class TeamApiServer {
       if ((await routeRoutineFlows(context, this.#options.routineFlows, this.#options.agents, hidden)) === "handled")
         return;
       if ((await routeWorkflows(context, this.#options.workflows, this.#options.agents, hidden)) === "handled") return;
+      if (
+        (await routeWorkflowFolders(
+          context,
+          this.#options.workflows,
+          this.#options.workflowFolders,
+          this.#options.agents,
+          hidden,
+        )) === "handled"
+      )
+        return;
       if ((await routeCrm(context, this.#options.crm)) === "handled") return;
       if ((await this.#routeEvents(context)) === "handled") return;
       if ((await routeAgentImport(context, this.#options.agentImport, newAgentHidden)) === "handled") return;
@@ -2698,6 +2713,7 @@ export class TeamApiServer {
         if (capability === AGENT_TASK_LIMIT_CAPABILITY) return this.#options.admin?.agentHost !== undefined;
         if (capability === AGENT_NEW_CHAT_CAPABILITY) return this.#options.admin?.agentHost !== undefined;
         if (capability === AGENT_PLAN_CARD_CAPABILITY) return this.#options.admin?.agentHost !== undefined;
+        if (capability === AGENT_BUILTIN_MEMORY_CAPABILITY) return this.#options.admin?.agentHost !== undefined;
         if (capability === AGENT_DEFAULTS_CAPABILITY) return this.#options.admin?.agentDefaults !== undefined;
         if (capability === AGENT_FAST_MODE_CAPABILITY) return this.#options.admin?.agentHost !== undefined;
         if (capability === AGENT_SPEED_CAPABILITY) return this.#options.admin?.agentHost !== undefined;
@@ -2787,6 +2803,8 @@ export class TeamApiServer {
         if (capability === ROUTINE_FLOWS_CAPABILITY) return this.#options.routineFlows !== undefined;
         if (capability === ROUTINE_FLOW_STOP_CAPABILITY) return this.#options.routineFlows !== undefined;
         if (capability === WORKFLOWS_CAPABILITY) return this.#options.workflows !== undefined;
+        if (capability === WORKFLOW_FOLDERS_CAPABILITY)
+          return this.#options.workflows !== undefined && this.#options.workflowFolders !== undefined;
         if (capability === CRM_CAPABILITY) return this.#options.crm !== undefined;
         if (capability === WORKFLOWS_GITHUB_CAPABILITY) return this.#options.workflows?.github !== undefined;
         if (capability === WORKFLOWS_MEDIA_CAPABILITY) return this.#options.workflows !== undefined;
@@ -3001,6 +3019,7 @@ function eventCapability(event: AgentEvent): TeamCurrentCapability | null {
   if (event.type === "skills-changed") return SKILLS_EVENTS_CAPABILITY;
   if (event.type === "routine-flows-changed") return ROUTINE_FLOWS_CAPABILITY;
   if (event.type === "workflows-changed") return WORKFLOWS_CAPABILITY;
+  if (event.type === "workflow-folders-changed") return WORKFLOW_FOLDERS_CAPABILITY;
   if (event.type === "crm-changed") return CRM_CAPABILITY;
   if (event.type === "vault-changed") return VAULT_CAPABILITY;
   if (event.type === "browser-profiles-changed") return BROWSER_PROFILES_EVENTS_CAPABILITY;

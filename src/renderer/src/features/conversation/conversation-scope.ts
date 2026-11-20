@@ -790,6 +790,7 @@ export function createConversationViewScope(props: ConversationProps) {
   );
   const scroll = createScrollStore({
     props,
+    drawLatestFirst: () => !chatSearchOpen(),
     markingRead,
     setMarkingRead,
     setComposerError: setScopedComposerError,
@@ -805,6 +806,7 @@ export function createConversationViewScope(props: ConversationProps) {
       setStickToLatest,
       getCurrentUnreadCount: () => currentUnreadCount,
       followLatest: (element) => glideConversationBottom(element),
+      followReaderScroll: (element) => followReaderScroll(element),
     },
   });
   const {
@@ -834,6 +836,9 @@ export function createConversationViewScope(props: ConversationProps) {
     timelineIndexById,
     scrollToIndex: (index) => messageVirtualizer.scrollToIndex(index),
     setStickToLatest,
+  });
+  createEffect(chatSearchOpen, (open) => {
+    if (open) messageVirtualizer.drawAllRows();
   });
   const search = createSearchStore({
     props,

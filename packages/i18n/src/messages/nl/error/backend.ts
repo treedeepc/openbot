@@ -345,6 +345,8 @@ export const messages = {
   "error.backend.libraryFolderOtherAgent": "Een bestand kan alleen naar een map van zijn agent.",
   "error.backend.libraryFolderMoveInvalid": "Deze map kan daar niet naartoe worden verplaatst.",
   "error.backend.libraryImportHidden": "Verborgen items worden niet geïmporteerd.",
+  "error.backend.workflowFolderLimit": "Een server kan maximaal {limit} workflowmappen hebben.",
+  "error.backend.workflowFolderPlacementLimit": "Er staan te veel workflows in mappen.",
   "error.backend.sectionNameDuplicate": "Namen van secties moeten uniek zijn.",
   "error.backend.directMessageRequired": "Schrijf eerst een bericht.",
   "error.backend.directMessageTooLong": "Een direct bericht kan maximaal {limit} tekens hebben.",
