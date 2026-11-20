@@ -6,3 +6,8 @@
 - An agent can now create, change and delete CRM customers, plans and payments, and the change takes
   effect at once. Before, the change waited as a proposal and an owner or an admin had to approve it
   on the CRM page. A row that comes from a source, such as a Stripe import, is still read-only.
+
+### Fixed
+
+- A CRM panel keeps its background in a transparent window. Before, the panel was see-through and the
+  customer list behind it showed in the panel.
