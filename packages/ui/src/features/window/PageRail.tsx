@@ -27,6 +27,12 @@ import { type AccountUsageProviderRow, accountUsageRowKey } from "@openbot/ui/fe
 import { useText } from "@openbot/ui/text";
 import { Dynamic, type JSX } from "@solidjs/web";
 import { createMemo, createSignal, For, onSettled, Show } from "solid-js";
+import {
+  isWorkspaceShortcutRecording,
+  type WorkspaceShortcutBindings,
+  type WorkspaceShortcutName,
+  workspaceShortcutCommand,
+} from "./workspace-shortcuts";
 
 interface RailMenuItem {
   label: string;
@@ -391,6 +397,8 @@ export type PageRailPinnablePage = (typeof PAGE_RAIL_PINNABLE_PAGES)[number];
 
 export interface PageRailProps {
   hidden: boolean;
+  keyboardShortcuts?: boolean | undefined;
+  shortcutBindings?: (() => WorkspaceShortcutBindings) | undefined;
   current: PageRailPage | null;
   pinned: readonly PageRailPinnablePage[];
   onPinChange: (page: PageRailPinnablePage, pinned: boolean) => void;
@@ -617,6 +625,39 @@ export function PageRail(props: PageRailProps) {
     }
     return list;
   });
+  const shortcutPages = createMemo((): { id: PageRailPage; open: () => void }[] => [
+    { id: "agents", open: () => props.onAgents() },
+    ...pages()
+      .filter((page) => props.pinned.includes(page.id))
+      .map((page) => ({ id: page.id, open: () => page.open(rail ?? document.body) })),
+  ]);
+
+  function runWorkspaceShortcut(command: WorkspaceShortcutName): void {
+    if (command === "openAgents") {
+      props.onAgents();
+      return;
+    }
+    const list = shortcutPages();
+    if (list.length === 0) return;
+    const at = list.findIndex((item) => item.id === props.current);
+    list[(at + 1) % list.length]?.open();
+  }
+
+  onSettled(() => {
+    if (!props.keyboardShortcuts) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (isWorkspaceShortcutRecording()) return;
+      const bindings = props.shortcutBindings?.();
+      if (!bindings) return;
+      const command = workspaceShortcutCommand(event, bindings);
+      if (!command) return;
+      event.preventDefault();
+      runWorkspaceShortcut(command);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  });
+
   return (
     <nav
       class="window-rail"

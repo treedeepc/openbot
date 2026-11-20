@@ -6,6 +6,10 @@
   something, such as a hidden item or a folder deeper than five levels, it lists that item and why.
 - The Library page offers Add files and Add folder in the desktop app. The web client does not show
   them, because a browser cannot pick files from your disk.
+- Two keyboard shortcuts in the desktop app: Shift+Cmd+A opens the assistants page, and Shift+Cmd+S
+  moves to the next menu module in the left rail. Use Ctrl instead of Cmd on Windows and Linux. Both
+  are listed in Settings, where you can give each one your own keys, turn it off, or put the default
+  back.
 
 ### Changed
 

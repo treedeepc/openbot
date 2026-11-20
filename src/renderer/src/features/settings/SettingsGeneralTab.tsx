@@ -34,8 +34,10 @@ import { LanguageSelect } from "@openbot/ui/features/settings/LanguageSelect";
 import { LogoColorPicker } from "@openbot/ui/features/settings/LogoColorPicker";
 import { SendShortcutSelect } from "@openbot/ui/features/settings/SendShortcutSelect";
 import { SidebarChatOrderSelect } from "@openbot/ui/features/settings/SidebarChatOrderSelect";
+import { WorkspaceShortcutRow } from "@openbot/ui/features/settings/WorkspaceShortcutRow";
+import { WORKSPACE_SHORTCUT_NAMES, type WorkspaceShortcutName } from "@openbot/ui/features/window/workspace-shortcuts";
 import { useText } from "@openbot/ui/text";
-import { createUniqueId, Show } from "solid-js";
+import { createUniqueId, For, Show } from "solid-js";
 import { useInstalledFonts } from "../../app-fonts";
 import { useAppearanceChoice } from "../../appearance-choice";
 import { setChatBubbleStyle, useChatBubbleStyle } from "../../chat-bubble-style-preference";
@@ -43,6 +45,12 @@ import { useI18n } from "../../i18n-context";
 import { useInterfaceSizeChoice } from "../../interface-size";
 import { useLayout } from "../../layout";
 import { useLogoColorChoice } from "../../logo-color";
+import {
+  setWorkspaceShortcut,
+  useWorkspaceShortcutBindings,
+  useWorkspaceShortcutStored,
+  workspaceShortcutPlatform,
+} from "../window/workspace-shortcut-preference";
 import { ChatBackdropSetting } from "./ChatBackdropSetting";
 import { ExternalLinkSelect } from "./ExternalLinkSelect";
 import { MotionSwitches } from "./MotionSwitches";
@@ -70,6 +78,12 @@ interface SettingsGeneralTabProps {
 export function SettingsGeneralTab(props: SettingsGeneralTabProps) {
   const i18n = useI18n();
   const layout = useLayout();
+  const storedShortcuts = useWorkspaceShortcutStored();
+  const shortcutBindings = useWorkspaceShortcutBindings();
+  const shortcutLabels = (): Record<WorkspaceShortcutName, string> => ({
+    openAgents: i18n.t("settings.shortcuts.openAgents"),
+    cycleModules: i18n.t("settings.shortcuts.cycleModules"),
+  });
   const backgroundRow = () =>
     props.platform === "darwin"
       ? ({ title: "settings.menuBar.title", description: "settings.menuBar.description" } as const)
@@ -138,6 +152,23 @@ export function SettingsGeneralTab(props: SettingsGeneralTabProps) {
                 />
               </ItemActions>
             </Item>
+          </ItemGroup>
+        </SettingsSection>
+
+        <SettingsSection title={i18n.t("settings.shortcuts.title")}>
+          <ItemGroup class="settings-modal-card">
+            <For each={[...WORKSPACE_SHORTCUT_NAMES]}>
+              {(name) => (
+                <WorkspaceShortcutRow
+                  name={name}
+                  labels={shortcutLabels()}
+                  stored={storedShortcuts()[name]}
+                  bindings={shortcutBindings()}
+                  platform={workspaceShortcutPlatform()}
+                  onChange={(value) => setWorkspaceShortcut(name, value)}
+                />
+              )}
+            </For>
           </ItemGroup>
         </SettingsSection>
 

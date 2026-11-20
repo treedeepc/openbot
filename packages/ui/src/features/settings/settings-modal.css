@@ -871,3 +871,17 @@
   font-size: var(--openbot-text-md);
   line-height: var(--openbot-leading-md);
 }
+
+.workspace-shortcut-field {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--openbot-space-1-5);
+}
+
+.workspace-shortcut-trigger {
+  min-width: 104px;
+  justify-content: center;
+  font-variant-numeric: tabular-nums;
+}

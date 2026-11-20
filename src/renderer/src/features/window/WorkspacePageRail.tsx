@@ -30,10 +30,12 @@ import { createWorkflowMediaCredits } from "../workflows/workflow-media-credits"
 import { desktopMediaCredits } from "../workflows/workflows-port";
 import { RailHelpMenu } from "./RailHelpMenu";
 import { useWindowPage } from "./window-page-context";
+import { useWorkspaceShortcutBindings } from "./workspace-shortcut-preference";
 
 export function WorkspacePageRail(props: { hidden: boolean }) {
   const text = useText();
   const windowPage = useWindowPage();
+  const shortcutBindings = useWorkspaceShortcutBindings();
   const { openAppSettings, setSkillsMarketplaceOpen, setPendingPluginSlug, setPendingPluginConnect } = useSettings();
   const usage = useUsage();
   const updates = useUpdates();
@@ -95,6 +97,8 @@ export function WorkspacePageRail(props: { hidden: boolean }) {
   return (
     <PageRail
       hidden={props.hidden}
+      keyboardShortcuts
+      shortcutBindings={shortcutBindings}
       current={current()}
       pinned={layout.railPinned()}
       onPinChange={layout.setRailPinned}
