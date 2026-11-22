@@ -399,6 +399,7 @@ function AuthenticatedStack() {
       />
       <Stack.Screen name="server-usage/index" options={largeTitlePage} />
       <Stack.Screen name="server-library" options={largeTitlePage} />
+      <Stack.Screen name="im" options={largeTitlePage} />
       <Stack.Screen name="server-marketplace/index" options={largeTitlePage} />
       <Stack.Screen name="share" options={formSheet([0.85])} />
       <Stack.Screen name="plan-limits" options={formSheet([0.85])} />

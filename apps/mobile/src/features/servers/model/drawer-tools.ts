@@ -3,6 +3,7 @@ import * as SecureStore from "expo-secure-store";
 import { create } from "zustand";
 
 const DRAWER_TOOL_IDS = [
+  "im",
   "tasks",
   "routines",
   "workflows",

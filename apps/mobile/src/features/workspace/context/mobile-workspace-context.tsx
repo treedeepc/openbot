@@ -116,6 +116,7 @@ import { verifyEd25519Base64Url } from "@openbot/team-client/ed25519";
 import { feedbackApproval } from "@openbot/team-client/feedback-approval";
 import { createFocusUsePing } from "@openbot/team-client/focus-use";
 import { createHostedServerWake, WAKE_RECONNECT_DELAY_MS } from "@openbot/team-client/hosted-server-wake";
+import { imHostPort } from "@openbot/team-client/im-host-port";
 import type {
   RemoteDownloadWatch,
   RemoteFileUpload,
@@ -1855,6 +1856,7 @@ export function MobileWorkspaceProvider({ children }: PropsWithChildren) {
         ),
       );
     const workspace: MobileWorkspaceActions = {
+      imPort: (serverId) => imHostPort({ request: () => teamApi(serverId) }),
       ...workflows,
       openBrowserView: browser.openBrowserView,
       remoteDesktopConnection: (serverId) => connections.current.get(serverId)?.client ?? null,

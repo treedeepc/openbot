@@ -150,6 +150,15 @@ import { HOST_RESTART_CAPABILITY } from "@openbot/contracts/team-protocol/host-r
 import { HOST_TIMEZONE_CAPABILITY } from "@openbot/contracts/team-protocol/host-timezone-v1";
 import { HOST_UPDATE_CAPABILITY } from "@openbot/contracts/team-protocol/host-update-v1";
 import { HOSTED_SITES_CAPABILITY } from "@openbot/contracts/team-protocol/hosted-sites-v1";
+import {
+  IM_BLOCKLIST_CAPABILITY,
+  IM_CONTACTS_CAPABILITY,
+  IM_DEVICES_CAPABILITY,
+  IM_INBOX_CAPABILITY,
+  IM_MESSAGES_CAPABILITY,
+  IM_PEERS_CAPABILITY,
+  IM_REPORT_CAPABILITY,
+} from "@openbot/contracts/team-protocol/im-v1";
 import { INSTANCE_TRANSFER_CAPABILITY } from "@openbot/contracts/team-protocol/instance-transfer-v1";
 import {
   LIBRARY_FOLDERS_CAPABILITY,
@@ -682,6 +691,12 @@ export function createHostRequestChecks(capabilities: ServerCapabilities): HostR
   return {
     canSearchFiles: (serverId) => has(serverId, CONVERSATION_FILE_SEARCH_CAPABILITY),
     canUseTasks: (serverId) => has(serverId, AGENT_TASKS_CAPABILITY),
+    canUseImSession: (serverId) => has(serverId, IM_PEERS_CAPABILITY) && has(serverId, IM_MESSAGES_CAPABILITY),
+    canUseImDevices: (serverId) => has(serverId, IM_DEVICES_CAPABILITY),
+    canUseImInbox: (serverId) => has(serverId, IM_INBOX_CAPABILITY) && has(serverId, IM_PEERS_CAPABILITY),
+    canUseImContacts: (serverId) => has(serverId, IM_CONTACTS_CAPABILITY),
+    canUseImBlock: (serverId) => has(serverId, IM_BLOCKLIST_CAPABILITY),
+    canUseImReport: (serverId) => has(serverId, IM_REPORT_CAPABILITY),
     canRunQueuedMessageAsTask: (serverId) =>
       has(serverId, AGENT_QUEUE_TASK_CAPABILITY) && has(serverId, AGENT_TASKS_CAPABILITY),
     canEditThreads: (serverId) => has(serverId, AGENT_THREADS_CAPABILITY),

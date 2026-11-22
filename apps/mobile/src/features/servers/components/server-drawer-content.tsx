@@ -8,6 +8,7 @@ import Check from "lucide-react-native/icons/check";
 import ChevronDown from "lucide-react-native/icons/chevron-down";
 import GalleryVerticalEnd from "lucide-react-native/icons/gallery-vertical-end";
 import ListChecks from "lucide-react-native/icons/list-checks";
+import MessagesSquare from "lucide-react-native/icons/messages-square";
 import Monitor from "lucide-react-native/icons/monitor";
 import Pin from "lucide-react-native/icons/pin";
 import PinOff from "lucide-react-native/icons/pin-off";
@@ -44,6 +45,7 @@ import { useCSSVariable, useUniwind } from "uniwind";
 import { showFailureAlert } from "@/features/analytics/failure-reports";
 import type { MobileSession } from "@/features/auth/api/mobile-auth";
 import { mobileUserName } from "@/features/auth/api/mobile-user-name";
+import { imEntryState, imEntryToolVisible } from "@/features/im/model/im-entry";
 import { hostedServerCalls } from "@/features/servers/api/hosted-servers";
 import {
   type DrawerToolId,
@@ -595,11 +597,18 @@ function DrawerServerTools({
   const tasksRow = useMobileWorkspaceSelector((current) =>
     serverRowState(current, serverId, (checks) => checks.canUseTasks(serverId)),
   );
+  const imRow = useMobileWorkspaceSelector((current) =>
+    imEntryState(
+      serverRowState(current, serverId, (checks) => checks.canUseImSession(serverId)),
+      serverRowState(current, serverId, (checks) => checks.canUseImDevices(serverId)),
+    ),
+  );
   const workflowsRow = useMobileWorkspaceSelector((current) =>
     serverRowState(current, serverId, (checks) => checks.canUseWorkflows(serverId)),
   );
   const routes = useMemo(
     (): Record<DrawerRoute, Href> => ({
+      im: { pathname: "/im", params: { serverId } },
       tasks: { pathname: "/server-tasks", params: { serverId } },
       routines: { pathname: "/server-routines", params: { serverId } },
       workflows: { pathname: "/server-workflows", params: { serverId } },
@@ -614,6 +623,9 @@ function DrawerServerTools({
     [serverId],
   );
   const tools: Record<DrawerToolId, DrawerTool | null> = {
+    im: imEntryToolVisible(imRow)
+      ? { icon: MessagesSquare, label: t("mobile.app.route.im"), disabled: imRow === "disabled" }
+      : null,
     tasks: values.tasks
       ? {
           icon: ListChecks,

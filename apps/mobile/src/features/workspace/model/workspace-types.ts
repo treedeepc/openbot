@@ -203,6 +203,7 @@ import type { ServerAppearance } from "@openbot/contracts/team-protocol/host-app
 import type { LiveVoiceSessionResponse, LiveVoiceStartRequest } from "@openbot/contracts/team-protocol/live-voice-v1";
 import type { QueueEditRequest } from "@openbot/contracts/team-protocol/queue-edit-v1";
 import type { RemoteConnectionFailure, RemoteRecoveryStatus, RemoteTeamDirectoryClient } from "@openbot/team-client";
+import type { ImHostPort } from "@openbot/team-client/im-client";
 import type { PlanLimits } from "@openbot/team-client/plan-limits";
 import type { RemoteDownloadWatch, RemoteFileUpload, RemoteLargeDownload } from "@openbot/team-client/remote-peer";
 import type {
@@ -692,6 +693,13 @@ export interface MobileWorkspaceContextValue {
   canSearchFiles: (serverId: string) => boolean;
   searchFiles: (query: string, serverId: string, cursor?: string) => Promise<ConversationFileSearchPage>;
   canUseTasks: (serverId: string) => boolean;
+  canUseImSession: (serverId: string) => boolean;
+  canUseImDevices: (serverId: string) => boolean;
+  imPort: (serverId: string) => ImHostPort | null;
+  canUseImInbox: (serverId: string) => boolean;
+  canUseImContacts: (serverId: string) => boolean;
+  canUseImBlock: (serverId: string) => boolean;
+  canUseImReport: (serverId: string) => boolean;
   canRunQueuedMessageAsTask: (serverId: string) => boolean;
   canEditThreads: (serverId: string) => boolean;
   canReadThreads: (serverId: string) => boolean;
@@ -807,6 +815,12 @@ export type MobileWorkspaceCapabilityCheck =
   | "canInstallAgentTemplate"
   | "canSearchFiles"
   | "canUseTasks"
+  | "canUseImSession"
+  | "canUseImDevices"
+  | "canUseImInbox"
+  | "canUseImContacts"
+  | "canUseImBlock"
+  | "canUseImReport"
   | "canRunQueuedMessageAsTask"
   | "canEditThreads"
   | "canReadThreads"

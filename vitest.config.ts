@@ -1,10 +1,16 @@
+import { fileURLToPath } from "node:url";
 import solidPlugin from "@solidjs/vite-plugin";
 import { configDefaults, defineConfig } from "vitest/config";
 import { TEST_TIMEOUT_MS } from "./src/backend/test-deadlines";
 import BalancedSequencer from "./tools/vitest/balanced-sequencer";
 
+const MOBILE_SRC = `${fileURLToPath(new URL("./apps/mobile/src", import.meta.url))}/`;
+
 export default defineConfig({
-  plugins: [solidPlugin()],
+  plugins: [solidPlugin({ exclude: [/apps\/mobile\//] })],
+  resolve: {
+    alias: [{ find: /^@\//, replacement: MOBILE_SRC }],
+  },
   test: {
     execArgv: ["--disable-warning=ExperimentalWarning"],
     globals: true,
