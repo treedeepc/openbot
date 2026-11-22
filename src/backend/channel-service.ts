@@ -73,6 +73,7 @@ import {
 import { ChannelMemoryStore } from "./channel-memory-store";
 import { CHANNEL_REPLY_ID_PREFIX, channelReplyExpectedResult, checkChannelReply, isReplyTask } from "./channel-replies";
 import { type ChannelAssignment, type ChannelContext, ChannelStore } from "./channel-store";
+import { sharedCausalChains, sharedCausalThreads } from "./im/causal-chain";
 import type { DeliveryContext, MailboxStore } from "./mailbox-store";
 import { type MessageDeleteAccess, MessageDeleteRefused } from "./message-delete";
 import type { OpenBotDatabase } from "./openbot-database";
@@ -175,6 +176,36 @@ export function channelHandoffSenderAgentId(request: ChannelMessage): string | n
     : null;
 }
 
+export function newChannelTask(
+  channelId: string,
+  messageId: string,
+  instruction: string,
+  ownerAgentId: string | null,
+  causalChainId?: string | null,
+): ChannelTask {
+  const inherited = causalChainId;
+  const id = randomUUID();
+  return {
+    id,
+    channelId,
+    ...(inherited === undefined ? {} : { causalChainId: inherited }),
+    parentTaskId: null,
+    rootTaskId: id,
+    ownerAgentId,
+    requestMessageId: messageId,
+    instruction,
+    attachmentDraftIds: [],
+    expectedResult: TASK_EXPECTED_RESULT,
+    sourceMessageIds: [messageId],
+    dependencies: [],
+    resources: [],
+    state: "queued",
+    revision: 0,
+    assignmentCount: 0,
+    error: null,
+  };
+}
+
 export class ChannelService {
   readonly store: ChannelStore;
   readonly memories: ChannelMemoryStore;
@@ -182,7 +213,7 @@ export class ChannelService {
   #scope = Scope.makeUnsafe();
   readonly #pumps = new Map<string, Fiber.Fiber<void>>();
   readonly #commands = new Map<string, Deferred.Deferred<void>>();
-  readonly #commandFibers = new Set<Fiber.Fiber<Channel | void, ChannelOperationError | MessageDeleteRefused>>();
+  readonly #commandFibers = new Set<Fiber.Fiber<Channel | undefined, ChannelOperationError | MessageDeleteRefused>>();
   readonly #interrupts = new Set<Fiber.Fiber<void>>();
   readonly #events = new Set<Fiber.Fiber<void>>();
   readonly #summaries = new Map<string, Fiber.Fiber<void>>();
@@ -308,13 +339,13 @@ export class ChannelService {
         const author = { kind: "coordinator" as const, ...input.author };
         this.store.update(channel, { messages: [this.message(channel.id, null, author, input.text)] }, operationId);
         this.publish(channel.id);
-      }),
+      }).pipe(Effect.as(undefined)),
     );
     return result;
   });
 
   readonly #serialize = Effect.fn("ChannelService.serialize")(
-    <A extends Channel | void, E extends ChannelOperationError | MessageDeleteRefused = ChannelOperationError>(
+    <A extends Channel | undefined, E extends ChannelOperationError | MessageDeleteRefused = ChannelOperationError>(
       channelId: string,
       operation: Effect.Effect<A, E>,
     ) =>
@@ -416,7 +447,7 @@ export class ChannelService {
           this.store.saveSummary(channelId, { version: summary.version + 1, throughSequence: sequence, text: "" });
         });
         yield* members.end(threads);
-      }).pipe(Effect.uninterruptible),
+      }).pipe(Effect.uninterruptible, Effect.as(undefined)),
     );
     this.publish(channelId);
   });
@@ -515,7 +546,7 @@ export class ChannelService {
     this.#serialize(
       channelId,
       Effect.gen({ self: this }, function* () {
-        if (this.#deletedChannels.has(channelId)) return;
+        if (this.#deletedChannels.has(channelId)) return undefined;
         const channel = yield* channelSync(() => this.store.get(channelId));
         const pump = this.#pumps.get(channelId);
         this.#deletedChannels.add(channelId);
@@ -559,7 +590,7 @@ export class ChannelService {
           yield* this.#releaseHeldAgents(agentIds);
           this.hooks.changed(channelId, channel.revision + 1);
         }).pipe(Effect.ensuring(Effect.sync(() => this.#deletedChannels.delete(channelId))));
-      }),
+      }).pipe(Effect.as(undefined)),
     ),
   );
 
@@ -818,6 +849,7 @@ export class ChannelService {
             requestMessageId: heldReply(item) ? item.requestMessageId : id,
             expectedResult: isReplyTask(item) && !heldReply(item) ? TASK_EXPECTED_RESULT : item.expectedResult,
             sourceMessageIds: [...item.sourceMessageIds.slice(-30), id],
+            causalChainId: item.causalChainId,
             revision: item.revision + 1,
             state: "queued",
             error: null,
@@ -1043,26 +1075,14 @@ export class ChannelService {
     return result;
   });
 
-  private newTask(channelId: string, messageId: string, instruction: string, ownerAgentId: string | null): ChannelTask {
-    const id = randomUUID();
-    return {
-      id,
-      channelId,
-      parentTaskId: null,
-      rootTaskId: id,
-      ownerAgentId,
-      requestMessageId: messageId,
-      instruction,
-      attachmentDraftIds: [],
-      expectedResult: TASK_EXPECTED_RESULT,
-      sourceMessageIds: [messageId],
-      dependencies: [],
-      resources: [],
-      state: "queued",
-      revision: 0,
-      assignmentCount: 0,
-      error: null,
-    };
+  private newTask(
+    channelId: string,
+    messageId: string,
+    instruction: string,
+    ownerAgentId: string | null,
+    causalChainId?: string | null,
+  ): ChannelTask {
+    return newChannelTask(channelId, messageId, instruction, ownerAgentId, causalChainId);
   }
 
   #scheduling(): { tasks: ReadonlyMap<string, ChannelTask>; assignments: ChannelAssignment[] } {
@@ -1585,7 +1605,7 @@ export class ChannelService {
           const others = task.attachmentDraftIds.length ? [] : rest;
           const siblings = others.map(
             (agentId): ChannelTask => ({
-              ...this.newTask(channelId, task.requestMessageId, task.instruction, agentId),
+              ...this.newTask(channelId, task.requestMessageId, task.instruction, agentId, task.causalChainId),
               sourceMessageIds: [...task.sourceMessageIds],
             }),
           );
@@ -1724,6 +1744,19 @@ export class ChannelService {
           answersRequest && !committing
             ? channelResult(yield* Effect.result(this.#requestAttachmentPaths(request ?? undefined)))
             : [];
+        const chainThreadId = (yield* channelSync(() => this.store.context(channelId, assignment.agentId))).threadId;
+        if (task.causalChainId) {
+          const known = sharedCausalChains.read(task.causalChainId);
+          sharedCausalThreads.bind(
+            chainThreadId,
+            known ?? {
+              chainId: task.causalChainId,
+              rootMessageId: task.requestMessageId,
+              trustDomain: "im-peer",
+              createdAt: Date.now(),
+            },
+          );
+        }
         const receipt = channelResult(
           yield* Effect.result(
             this.mailbox
@@ -1734,6 +1767,7 @@ export class ChannelService {
                 draftIds: task.attachmentDraftIds,
                 sourcePaths,
                 channelId,
+                causalChainId: task.causalChainId ?? null,
                 idempotencyKey: `channel-assignment:${assignment.id}`,
               })
               .pipe(Effect.mapError(channelFailure)),
@@ -2950,10 +2984,10 @@ export class ChannelService {
           );
           result = outcome.result;
           const changed = outcome.note;
-          if (!changed) return;
+          if (!changed) return undefined;
           yield* channelSync(() => this.store.update(open(), { messages: [note(changed)] }, receipt));
           this.publish(channelId);
-        }),
+        }).pipe(Effect.as(undefined)),
       );
       return result;
     }
@@ -3410,7 +3444,7 @@ export class ChannelService {
       reply.message.turnId = turnId;
       reply.message.replyToMessageId = check.target.id;
       const answer: ChannelTask = {
-        ...this.newTask(channelId, reply.id, check.text, check.target.author.id),
+        ...this.newTask(channelId, reply.id, check.text, check.target.author.id, task.causalChainId),
         parentTaskId: task.id,
         rootTaskId: task.rootTaskId,
         expectedResult: channelReplyExpectedResult(sender),
@@ -3567,7 +3601,7 @@ export class ChannelService {
             revision: task.revision + 1,
           }
         : {
-            ...this.newTask(channelId, task.requestMessageId, args.task, args.recipientAgentId),
+            ...this.newTask(channelId, task.requestMessageId, args.task, args.recipientAgentId, task.causalChainId),
             parentTaskId: task.id,
             rootTaskId: task.rootTaskId,
             expectedResult: args.expectedResult,

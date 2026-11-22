@@ -92,6 +92,7 @@ import { OPENBOT_BROWSER_NAMESPACE } from "../browser-tools";
 import type { ChannelService } from "../channel-service";
 import type { CrmHandle } from "../crm/crm";
 import type { ProviderSession } from "../database/provider-sessions";
+import { authorizeToolCall, type CausalChain, causalChainForThread } from "../im/causal-chain";
 import type { MailboxStore } from "../mailbox-store";
 import { agentMcpServers, codexDeferredMcpServers, openCodeMcpServers } from "../mcp-provider-shapes";
 import { type MessagingThreads, PLATFORM_NAMES } from "../messaging/messaging-threads";
@@ -415,6 +416,7 @@ export interface OpenBotToolRouterHooks {
   setAvatar(agentId: string, image: AvatarImageInput | null): Effect.Effect<AgentSummary, ToolOperationFailed>;
   enabledMcpServers(agentId?: string): McpServerConfig[];
   emitError(code: string, error: unknown, agentId?: string): void;
+  causalChainOf?(threadId: string): CausalChain | null | undefined;
   redactMcp(text: string): string;
   redactMcpForAgent(text: string): string;
   runsTurn(agentId: string): boolean;
@@ -657,6 +659,15 @@ export class OpenBotToolRouter {
           if (!isDynamicToolCall(request.params)) throw new Error("Invalid dynamic tool request.");
           let params = this.#asSubagentParent(request.params);
           const fromSubagent = params.threadId !== request.params.threadId;
+          {
+            const decision = authorizeToolCall(
+              this.#hooks.causalChainOf?.(params.threadId) ?? causalChainForThread(params.threadId) ?? null,
+            );
+            if (!decision.toolsEnabled) {
+              client.respond(request.id, openBotToolFailure(decision.reason ?? "im.unauthorized"));
+              return;
+            }
+          }
           if (params.namespace === "openbot") {
             const { threadId } = params;
             const invalid = (text = sourceText("error.agent.toolRequestInvalid")) => {

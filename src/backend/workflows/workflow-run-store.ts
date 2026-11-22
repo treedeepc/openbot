@@ -38,6 +38,7 @@ export interface StoredWorkflowRun extends WorkflowRun {
   fromNodeId: string | null;
   scheduledFor: string | null;
   payload: string | null;
+  causalChainId: string | null;
 }
 
 export interface StoredWorkflowStep extends WorkflowStep {
@@ -49,6 +50,7 @@ export interface StoredWorkflowStep extends WorkflowStep {
   turnId: string | null;
   createdAt: string;
   sequence: number;
+  causalChainId: string | null;
 }
 
 const OPEN_STEP_STATUSES = ["running", "approval"] as const satisfies readonly WorkflowStepStatus[];
@@ -89,6 +91,7 @@ export interface NewWorkflowRun {
   revision: number;
   graph: WorkflowGraph;
   payload: string | null;
+  causalChainId?: string | null;
 }
 
 export interface NewWorkflowStep {
@@ -151,8 +154,8 @@ export class WorkflowRunStore {
       const at = now.toISOString();
       db.prepare(
         `INSERT INTO workflow_runs (run_id, workflow_id, number, trigger_node_id, from_node_id, source, scheduled_for,
-          idempotency_key, graph_revision, graph_json, payload, status, started_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'running', ?, ?)`,
+          idempotency_key, graph_revision, graph_json, payload, status, started_at, updated_at, causal_chain_id)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'running', ?, ?, ?)`,
       ).run(
         runId,
         input.workflowId,
@@ -167,6 +170,7 @@ export class WorkflowRunStore {
         input.payload,
         at,
         at,
+        input.causalChainId ?? null,
       );
       const run = this.run(runId);
       if (!run) throw new Error("A new workflow run was not stored.");
@@ -322,8 +326,10 @@ export class WorkflowRunStore {
       const ended = isOneOf(OPEN_STEP_STATUSES, input.status) ? null : at;
       db.prepare(
         `INSERT INTO workflow_steps (step_id, workflow_id, run_id, node_id, attempt, request_id, kind, agent_id, status,
-          input, settings_json, sources_json, output, branch, error, started_at, ended_at, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          input, settings_json, sources_json, output, branch, error, started_at, ended_at, created_at, updated_at,
+          causal_chain_id)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+           (SELECT causal_chain_id FROM workflow_runs WHERE run_id = ?))`,
       ).run(
         stepId,
         input.workflowId,
@@ -344,6 +350,7 @@ export class WorkflowRunStore {
         ended,
         at,
         at,
+        input.runId,
       );
       const step = this.step(stepId);
       if (!step) throw new Error("A new workflow step was not stored.");
@@ -520,12 +527,13 @@ export function publicStep(step: StoredWorkflowStep): WorkflowStep {
 
 const RUN_SELECT = `
   SELECT run_id, workflow_id, number, trigger_node_id, from_node_id, source, scheduled_for, graph_json, payload,
-    status, error, started_at, ended_at
+    status, error, started_at, ended_at, causal_chain_id
   FROM workflow_runs`;
 
 const STEP_SELECT = `
   SELECT step_id, workflow_id, run_id, node_id, attempt, kind, agent_id, status, delivery_id, turn_id, input,
-    settings_json, sources_json, output, branch, error, started_at, ended_at, created_at, rowid AS sequence
+    settings_json, sources_json, output, branch, error, started_at, ended_at, created_at, rowid AS sequence,
+    causal_chain_id
   FROM workflow_steps`;
 
 function toRun(row: DynamicRecord): StoredWorkflowRun {
@@ -544,6 +552,7 @@ function toRun(row: DynamicRecord): StoredWorkflowRun {
     endedAt: optionalStringColumn(row, "ended_at"),
     scheduledFor: optionalStringColumn(row, "scheduled_for"),
     payload: optionalStringColumn(row, "payload"),
+    causalChainId: optionalStringColumn(row, "causal_chain_id"),
     graph,
   };
 }
@@ -583,6 +592,7 @@ function toStep(row: DynamicRecord): StoredWorkflowStep {
     endedAt: optionalStringColumn(row, "ended_at"),
     createdAt: requiredStringColumn(row, "created_at"),
     sequence: requiredNumberColumn(row, "sequence"),
+    causalChainId: optionalStringColumn(row, "causal_chain_id"),
   };
 }
 

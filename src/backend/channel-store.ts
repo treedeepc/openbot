@@ -689,11 +689,15 @@ export class ChannelStore {
     }
     for (const task of change.tasks)
       db.prepare(
-        "INSERT INTO projection_channel_tasks VALUES (?, ?, ?) ON CONFLICT(task_id) DO UPDATE SET task_json = excluded.task_json",
-      ).run(task.id, change.channel.id, JSON.stringify(task));
+        `INSERT INTO projection_channel_tasks (task_id, channel_id, task_json, causal_chain_id)
+         VALUES (?, ?, ?, ?)
+         ON CONFLICT(task_id) DO UPDATE SET task_json = excluded.task_json, causal_chain_id = excluded.causal_chain_id`,
+      ).run(task.id, change.channel.id, JSON.stringify(task), task.causalChainId ?? null);
     for (const assignment of change.assignments)
       db.prepare(
-        "INSERT INTO projection_channel_assignments VALUES (?, ?, ?, ?, ?) ON CONFLICT(assignment_id) DO UPDATE SET delivery_id = excluded.delivery_id, assignment_json = excluded.assignment_json",
+        `INSERT INTO projection_channel_assignments (assignment_id, channel_id, task_id, delivery_id, assignment_json)
+         VALUES (?, ?, ?, ?, ?)
+         ON CONFLICT(assignment_id) DO UPDATE SET delivery_id = excluded.delivery_id, assignment_json = excluded.assignment_json`,
       ).run(assignment.id, change.channel.id, assignment.taskId, assignment.deliveryId, JSON.stringify(assignment));
   }
 

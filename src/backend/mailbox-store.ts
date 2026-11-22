@@ -206,6 +206,7 @@ interface EnqueueInput {
   draftIds?: string[];
   voiceRecordingDraftId?: string;
   sourcePaths?: string[];
+  causalChainId?: string | null;
   idempotencyKey?: string;
 }
 
@@ -676,6 +677,7 @@ export class MailboxStore {
         turnId: null,
         error: null,
         createdAt,
+        ...(input.causalChainId === undefined ? {} : { causalChainId: input.causalChainId }),
       }));
 
       this.#state.messages.push(message);
