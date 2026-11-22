@@ -36,11 +36,11 @@ export function sealQueuedDelivery(queueKey: string, hostId: string, message: Qu
 }
 
 export function openQueuedDelivery(
-  privateKey: CryptoKey,
+  recipientPrivateKey: CryptoKey,
   hostId: string,
   sealed: string,
 ): Promise<QueuedSignalMessage> {
-  return openHostGrant(KIND, privateKey, hostId, sealed, decodeQueuedMessage);
+  return openHostGrant(KIND, recipientPrivateKey, hostId, sealed, decodeQueuedMessage);
 }
 
 function decodeQueuedMessage(value: unknown): QueuedSignalMessage {

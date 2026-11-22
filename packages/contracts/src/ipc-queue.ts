@@ -47,6 +47,7 @@ export interface QueueDelivery {
   turnId: string | null;
   error: string | null;
   createdAt: string;
+  causalChainId?: string | null;
   editing?: boolean;
   expectsReply?: boolean;
   steerFallback?: QueueSteerFallback;

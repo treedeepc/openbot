@@ -3,6 +3,7 @@ import { DatabaseSync, type SQLOutputValue } from "node:sqlite";
 import { afterEach, describe, expect, it } from "vitest";
 import { CRM_TABLES_AFTER_MIGRATION } from "./crm/crm-schema";
 import { THREAD_EVENT_COMPACTION_TABLES_AFTER_MIGRATION } from "./migrations/0065-thread-event-compaction";
+import { IM_TABLES_AFTER_MIGRATION } from "./migrations/0067-im";
 import { migrateOpenBotDatabase } from "./openbot-database-schema";
 
 const databases: DatabaseSync[] = [];
@@ -76,6 +77,10 @@ describe("agent wait migration", () => {
       const before = contents(db);
       migrateOpenBotDatabase(db);
       expect(contents(db)).toEqual({
+        ...IM_TABLES_AFTER_MIGRATION,
+        im_channel_members: [],
+        im_relay_settings: [],
+        im_proxy_settings: [],
         ...withNoMemorySite(withChatRunPlace(before)),
         agent_waits: [],
         projection_messaging_memories: [],
@@ -109,7 +114,7 @@ describe("agent wait migration", () => {
         ...THREAD_EVENT_COMPACTION_TABLES_AFTER_MIGRATION,
         projection_pinned_thread_messages: [],
       });
-      expect(db.prepare("SELECT MAX(version) AS version FROM schema_migrations").get()).toEqual({ version: 66 });
+      expect(db.prepare("SELECT MAX(version) AS version FROM schema_migrations").get()).toEqual({ version: 75 });
       expect(db.prepare("PRAGMA foreign_keys").get()).toEqual({ foreign_keys: 1 });
       expect(db.prepare("PRAGMA foreign_key_check").all()).toEqual([]);
       expect(db.prepare("PRAGMA integrity_check").get()).toEqual({ integrity_check: "ok" });
@@ -129,6 +134,10 @@ describe("agent wait migration", () => {
     db.exec("DROP TRIGGER fail_marker");
     migrateOpenBotDatabase(db);
     expect(contents(db)).toEqual({
+      ...IM_TABLES_AFTER_MIGRATION,
+      im_channel_members: [],
+      im_relay_settings: [],
+      im_proxy_settings: [],
       ...withNoMemorySite(withChatRunPlace(before)),
       agent_waits: [],
       projection_messaging_memories: [],
@@ -167,9 +176,9 @@ describe("agent wait migration", () => {
   it("rejects newer and incomplete migration histories before it creates the table", () => {
     const db = databaseAtWithSeed(33);
     const before = contents(db);
-    db.exec("INSERT INTO schema_migrations VALUES(67,'now')");
+    db.exec("INSERT INTO schema_migrations VALUES(999,'now')");
     expect(() => migrateOpenBotDatabase(db)).toThrow("newer than this application supports");
-    db.exec("DELETE FROM schema_migrations WHERE version=67; DELETE FROM schema_migrations WHERE version=20");
+    db.exec("DELETE FROM schema_migrations WHERE version=999; DELETE FROM schema_migrations WHERE version=20");
     expect(() => migrateOpenBotDatabase(db)).toThrow("missing version 20");
     expect(contents(db)).toEqual(before);
     expect(waitTables(db)).toEqual([]);

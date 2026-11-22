@@ -1,7 +1,8 @@
 // @vitest-environment node
-import { DatabaseSync } from "node:sqlite";
+import { DatabaseSync, type SQLOutputValue } from "node:sqlite";
 import { afterEach, describe, expect, it } from "vitest";
 import { THREAD_EVENT_COMPACTION_TABLES_AFTER_MIGRATION } from "./migrations/0065-thread-event-compaction";
+import { IM_TABLES_AFTER_MIGRATION } from "./migrations/0067-im";
 import { migrateOpenBotDatabase } from "./openbot-database-schema";
 
 const databases: DatabaseSync[] = [];
@@ -65,6 +66,7 @@ const THREADS = [
     branch_source_message_id: null,
     branch_through_message_id: null,
     routine_id: null,
+    causal_chain_id: null,
   },
   {
     thread_id: "openbot-thread-open",
@@ -83,8 +85,26 @@ const THREADS = [
     branch_source_message_id: null,
     branch_through_message_id: null,
     routine_id: null,
+    causal_chain_id: null,
   },
 ];
+
+function withCausalChain(
+  rows: ReadonlyArray<Record<string, SQLOutputValue>>,
+  table: string,
+): Record<string, SQLOutputValue>[] {
+  if (
+    ![
+      "projection_agent_threads",
+      "projection_channel_tasks",
+      "workflow_runs",
+      "workflow_steps",
+      "projection_deliveries",
+    ].includes(table)
+  )
+    return [...rows];
+  return rows.map((row) => ({ ...row, causal_chain_id: null }));
+}
 
 function contents(db: DatabaseSync): Record<string, unknown[]> {
   const tables = db
@@ -94,7 +114,9 @@ function contents(db: DatabaseSync): Record<string, unknown[]> {
     )
     .all()
     .map((row) => String(row.name));
-  return Object.fromEntries(tables.map((table) => [table, db.prepare(`SELECT * FROM "${table}"`).all()]));
+  return Object.fromEntries(
+    tables.map((table) => [table, withCausalChain(db.prepare(`SELECT * FROM "${table}"`).all(), table)]),
+  );
 }
 
 function threads(db: DatabaseSync): unknown[] {
@@ -127,7 +149,7 @@ function withoutTasks(rows: Record<string, unknown[]>): Record<string, unknown[]
 }
 
 function expectHealthy(db: DatabaseSync): void {
-  expect(db.prepare("SELECT MAX(version) AS version FROM schema_migrations").get()).toEqual({ version: 66 });
+  expect(db.prepare("SELECT MAX(version) AS version FROM schema_migrations").get()).toEqual({ version: 75 });
   expect(db.prepare("PRAGMA foreign_keys").get()).toEqual({ foreign_keys: 1 });
   expect(db.prepare("PRAGMA foreign_key_check").all()).toEqual([]);
   expect(db.prepare("PRAGMA integrity_check").get()).toEqual({ integrity_check: "ok" });
@@ -160,6 +182,10 @@ describe("agent thread migration", () => {
       const before = contents(db);
       migrateOpenBotDatabase(db);
       expect(withoutTasks(contents(db))).toEqual({
+        ...IM_TABLES_AFTER_MIGRATION,
+        im_channel_members: [],
+        im_relay_settings: [],
+        im_proxy_settings: [],
         ...withoutTasks(before),
         ...EMPTY_GITHUB_TABLES,
         ...THREAD_EVENT_COMPACTION_TABLES_AFTER_MIGRATION,
@@ -237,9 +263,9 @@ describe("agent thread migration", () => {
     seedThreads(db);
     seedTasks(db);
     const before = contents(db);
-    db.exec("INSERT INTO schema_migrations VALUES(67,'now')");
+    db.exec("INSERT INTO schema_migrations VALUES(999,'now')");
     expect(() => migrateOpenBotDatabase(db)).toThrow("newer than this application supports");
-    db.exec("DELETE FROM schema_migrations WHERE version=67; DELETE FROM schema_migrations WHERE version=20");
+    db.exec("DELETE FROM schema_migrations WHERE version=999; DELETE FROM schema_migrations WHERE version=20");
     expect(() => migrateOpenBotDatabase(db)).toThrow("missing version 20");
     expect(contents(db)).toEqual(before);
   });

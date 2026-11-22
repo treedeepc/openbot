@@ -37,13 +37,13 @@ export function importHostGrantPrivateKey(privateKey: string): Promise<CryptoKey
 
 export async function sealHostGrant(
   kind: HostGrantKind,
-  hostPublicKey: string,
+  recipientPublicKey: string,
   nonce: string,
   grant: unknown,
 ): Promise<string> {
   const recipient = await crypto.subtle.importKey(
     "raw",
-    fromBase64Url(hostPublicKey),
+    fromBase64Url(recipientPublicKey),
     { name: "ECDH", namedCurve: "P-256" },
     false,
     [],
@@ -74,7 +74,7 @@ export async function sealHostGrant(
 
 export async function openHostGrant<T>(
   kind: HostGrantKind,
-  privateKey: CryptoKey,
+  recipientPrivateKey: CryptoKey,
   nonce: string,
   payload: string,
   decode: (value: unknown) => T,
@@ -97,7 +97,7 @@ export async function openHostGrant<T>(
     false,
     [],
   );
-  const key = await contentKey(kind, privateKey, sender, ephemeralPublic);
+  const key = await contentKey(kind, recipientPrivateKey, sender, ephemeralPublic);
   const plaintext = await crypto.subtle.decrypt(
     { name: "AES-GCM", iv: fromBase64Url(envelope.iv), additionalData: new TextEncoder().encode(nonce) },
     key,

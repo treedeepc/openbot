@@ -13,6 +13,7 @@ import { withChannelSeenSubtasks } from "./channel-seen-subtasks-v1";
 import { withChannelTaskWaits } from "./channel-task-waits-v1";
 import { CHANNEL_ROUTES, channelRequest, channelResponse, isChannelRoute } from "./channels-v1";
 import { isChannelHistoryExtentRoute, withChannelHistoryExtent } from "./history-extent-v1";
+import { imRequest, imResponse, isImRoute } from "./im-v1";
 import { isMcpSignInListRoute, mcpManyServersResponse, mcpManySignInsResponse } from "./mcp-many-servers-v1";
 import { isMcpRoute, mcpRequest, mcpResponse } from "./mcp-v1";
 import { optionalRouteCodec } from "./optional-routes";
@@ -79,6 +80,7 @@ const MCP_CODEC: TeamSideRouteCodec = {
     options?.mcpManyServers ? mcpManyServersResponse(path, status, value) : mcpResponse(path, status, value),
 };
 const STORAGE_CODEC: TeamSideRouteCodec = { request: storageRequest, response: storageResponse };
+const IM_CODEC: TeamSideRouteCodec = { request: imRequest, response: imResponse };
 const ATTACHMENT_PREVIEW_SIDE_CODEC: TeamSideRouteCodec = {
   request: (_path, value) => ATTACHMENT_PREVIEW_CODEC.request(value),
   response: (_path, status, value) => ATTACHMENT_PREVIEW_CODEC.response(status, value),
@@ -89,6 +91,7 @@ export function teamSideRouteCodec(path: string): TeamSideRouteCodec | null {
   if (isChannelPictureRoute(path)) return CHANNEL_PICTURE_CODEC;
   if (isMcpRoute(path)) return MCP_CODEC;
   if (isStorageRoute(path)) return STORAGE_CODEC;
+  if (isImRoute(path)) return IM_CODEC;
   if (isAttachmentPreviewRoute(path)) return ATTACHMENT_PREVIEW_SIDE_CODEC;
   const admin = optionalRouteCodec(path);
   return admin

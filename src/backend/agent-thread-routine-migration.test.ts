@@ -38,6 +38,23 @@ function seed(db: DatabaseSync): void {
 
 type Contents = Record<string, Record<string, SQLOutputValue>[]>;
 
+function withCausalChain(
+  rows: ReadonlyArray<Record<string, SQLOutputValue>>,
+  table: string,
+): Record<string, SQLOutputValue>[] {
+  if (
+    ![
+      "projection_agent_threads",
+      "projection_channel_tasks",
+      "workflow_runs",
+      "workflow_steps",
+      "projection_deliveries",
+    ].includes(table)
+  )
+    return [...rows];
+  return rows.map((row) => ({ ...row, causal_chain_id: null }));
+}
+
 function contents(db: DatabaseSync): Contents {
   const tables = db
     .prepare(
@@ -46,7 +63,9 @@ function contents(db: DatabaseSync): Contents {
     )
     .all()
     .map((row) => String(row.name));
-  return Object.fromEntries(tables.map((table) => [table, db.prepare(`SELECT * FROM "${table}"`).all()]));
+  return Object.fromEntries(
+    tables.map((table) => [table, withCausalChain(db.prepare(`SELECT * FROM "${table}"`).all(), table)]),
+  );
 }
 
 function expectRowsKept(before: Contents, after: Contents): void {
@@ -60,6 +79,7 @@ function expectRowsKept(before: Contents, after: Contents): void {
         branch_source_thread_id: null,
         branch_source_message_id: null,
         branch_through_message_id: null,
+        causal_chain_id: null,
         ...row,
         routine_id: null,
       })),
@@ -79,7 +99,7 @@ function routineIndex(db: DatabaseSync): SQLOutputValue | undefined {
 }
 
 function expectHealthy(db: DatabaseSync): void {
-  expect(db.prepare("SELECT MAX(version) AS version FROM schema_migrations").get()).toEqual({ version: 66 });
+  expect(db.prepare("SELECT MAX(version) AS version FROM schema_migrations").get()).toEqual({ version: 75 });
   expect(db.prepare("PRAGMA foreign_keys").get()).toEqual({ foreign_keys: 1 });
   expect(db.prepare("PRAGMA foreign_key_check").all()).toEqual([]);
   expect(db.prepare("PRAGMA integrity_check").get()).toEqual({ integrity_check: "ok" });
@@ -109,7 +129,11 @@ describe("agent thread routine migration", () => {
       const before = contents(db);
       migrateOpenBotDatabase(db);
       expectRowsKept(before, contents(db));
-      expect(threadColumns(db).slice(-4)).toEqual([...BRANCH_COLUMNS, "routine_id"]);
+      expect(
+        threadColumns(db)
+          .filter((name) => name !== "causal_chain_id")
+          .slice(-4),
+      ).toEqual([...BRANCH_COLUMNS, "routine_id"]);
       expect(routineIndex(db)).toContain("WHERE routine_id IS NOT NULL");
       expectHealthy(db);
     });
@@ -153,9 +177,9 @@ describe("agent thread routine migration", () => {
     seed(db);
     const before = contents(db);
     const columnsBefore = threadColumns(db);
-    db.exec("INSERT INTO schema_migrations VALUES(67,'now')");
+    db.exec("INSERT INTO schema_migrations VALUES(999,'now')");
     expect(() => migrateOpenBotDatabase(db)).toThrow("newer than this application supports");
-    db.exec("DELETE FROM schema_migrations WHERE version=67; DELETE FROM schema_migrations WHERE version=47");
+    db.exec("DELETE FROM schema_migrations WHERE version=999; DELETE FROM schema_migrations WHERE version=47");
     expect(() => migrateOpenBotDatabase(db)).toThrow("missing version 47");
     expect(contents(db)).toEqual(before);
     expect(threadColumns(db)).toEqual(columnsBefore);
@@ -167,7 +191,7 @@ describe("agent thread routine migration", () => {
     seed(db);
     migrateOpenBotDatabase(db);
     const after = contents(db);
-    db.exec("INSERT INTO schema_migrations VALUES(67,'now')");
+    db.exec("INSERT INTO schema_migrations VALUES(999,'now')");
     expect(() => migrateOpenBotDatabase(db)).toThrow("newer than this application supports");
     expect(contents(db)).toEqual(after);
   });

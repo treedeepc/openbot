@@ -170,6 +170,7 @@ export interface ChannelTask {
   seenDependencies?: string[];
   stallReason?: ChannelTaskStallReason;
   lastActivityAt?: string | null;
+  causalChainId?: string | null;
   health?: ChannelTaskHealth;
 }
 

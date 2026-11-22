@@ -45,7 +45,13 @@
     "./agent-tasks": "./src/agent-tasks.ts",
     "./stored-files": "./src/stored-files.ts",
     "./workflow-decoding": "./src/workflow-decoding.ts",
-    "./crm-decoding": "./src/crm-decoding.ts"
+    "./crm-decoding": "./src/crm-decoding.ts",
+    "./im-client": "./src/im-client.ts",
+    "./im-host-port": "./src/im-host-port.ts",
+    "./im-notify": "./src/im-notify.ts",
+    "./im-pairing": "./src/im-pairing.ts",
+    "./im-resend": "./src/im-resend.ts",
+    "./im-proxy": "./src/im-proxy.ts"
   },
   "scripts": {
     "typecheck": "bun ../../scripts/type-checker.ts --noEmit -p tsconfig.json"

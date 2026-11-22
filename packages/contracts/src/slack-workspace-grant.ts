@@ -18,19 +18,19 @@ export interface SlackWorkspaceGrant {
 export const createSlackWorkspaceKeyPair = createHostGrantKeyPair;
 
 export function sealSlackWorkspaceGrant(
-  hostPublicKey: string,
+  recipientPublicKey: string,
   nonce: string,
   grant: SlackWorkspaceGrant,
 ): Promise<string> {
-  return sealHostGrant(KIND, hostPublicKey, nonce, grant);
+  return sealHostGrant(KIND, recipientPublicKey, nonce, grant);
 }
 
 export function openSlackWorkspaceGrant(
-  privateKey: CryptoKey,
+  recipientPrivateKey: CryptoKey,
   nonce: string,
   payload: string,
 ): Promise<SlackWorkspaceGrant> {
-  return openHostGrant(KIND, privateKey, nonce, payload, decodeSlackWorkspaceGrant);
+  return openHostGrant(KIND, recipientPrivateKey, nonce, payload, decodeSlackWorkspaceGrant);
 }
 
 function decodeSlackWorkspaceGrant(grant: unknown): SlackWorkspaceGrant {

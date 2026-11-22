@@ -11,16 +11,20 @@ export interface DiscordGuildGrant {
 
 export const createDiscordGuildKeyPair = createHostGrantKeyPair;
 
-export function sealDiscordGuildGrant(hostPublicKey: string, nonce: string, grant: DiscordGuildGrant): Promise<string> {
-  return sealHostGrant(KIND, hostPublicKey, nonce, grant);
+export function sealDiscordGuildGrant(
+  recipientPublicKey: string,
+  nonce: string,
+  grant: DiscordGuildGrant,
+): Promise<string> {
+  return sealHostGrant(KIND, recipientPublicKey, nonce, grant);
 }
 
 export function openDiscordGuildGrant(
-  privateKey: CryptoKey,
+  recipientPrivateKey: CryptoKey,
   nonce: string,
   payload: string,
 ): Promise<DiscordGuildGrant> {
-  return openHostGrant(KIND, privateKey, nonce, payload, decodeDiscordGuildGrant);
+  return openHostGrant(KIND, recipientPrivateKey, nonce, payload, decodeDiscordGuildGrant);
 }
 
 function decodeDiscordGuildGrant(grant: unknown): DiscordGuildGrant {

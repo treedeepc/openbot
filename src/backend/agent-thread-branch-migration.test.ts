@@ -3,6 +3,7 @@ import { DatabaseSync, type SQLOutputValue } from "node:sqlite";
 import { afterEach, describe, expect, it } from "vitest";
 import { CRM_TABLES_AFTER_MIGRATION } from "./crm/crm-schema";
 import { THREAD_EVENT_COMPACTION_TABLES_AFTER_MIGRATION } from "./migrations/0065-thread-event-compaction";
+import { IM_TABLES_AFTER_MIGRATION } from "./migrations/0067-im";
 import { migrateOpenBotDatabase } from "./openbot-database-schema";
 
 const databases: DatabaseSync[] = [];
@@ -37,6 +38,23 @@ function seed(db: DatabaseSync): void {
         'Provider said no', '2026-10-01T09:00:00.000Z', '2026-10-02T09:00:00.000Z', '2026-10-03T09:00:00.000Z', 7)`);
 }
 
+function withCausalChain(
+  rows: ReadonlyArray<Record<string, SQLOutputValue>>,
+  table: string,
+): Record<string, SQLOutputValue>[] {
+  if (
+    ![
+      "projection_agent_threads",
+      "projection_channel_tasks",
+      "workflow_runs",
+      "workflow_steps",
+      "projection_deliveries",
+    ].includes(table)
+  )
+    return [...rows];
+  return rows.map((row) => ({ ...row, causal_chain_id: null }));
+}
+
 function contents(db: DatabaseSync): Record<string, Record<string, SQLOutputValue>[]> {
   const tables = db
     .prepare(
@@ -45,7 +63,9 @@ function contents(db: DatabaseSync): Record<string, Record<string, SQLOutputValu
     )
     .all()
     .map((row) => String(row.name));
-  return Object.fromEntries(tables.map((table) => [table, db.prepare(`SELECT * FROM "${table}"`).all()]));
+  return Object.fromEntries(
+    tables.map((table) => [table, withCausalChain(db.prepare(`SELECT * FROM "${table}"`).all(), table)]),
+  );
 }
 
 function withBranchLink(
@@ -64,6 +84,10 @@ function withBranchLink(
     projection_messaging_pings: [],
     projection_messaging_history: [],
     ...CRM_TABLES_AFTER_MIGRATION,
+    ...IM_TABLES_AFTER_MIGRATION,
+    im_channel_members: [],
+    im_relay_settings: [],
+    im_proxy_settings: [],
     ...THREAD_EVENT_COMPACTION_TABLES_AFTER_MIGRATION,
     projection_pinned_thread_messages: [],
     projection_agent_threads: (before.projection_agent_threads ?? []).map((row) => ({
@@ -72,6 +96,7 @@ function withBranchLink(
       branch_source_message_id: null,
       branch_through_message_id: null,
       routine_id: null,
+      causal_chain_id: null,
     })),
   };
 }
@@ -84,7 +109,7 @@ function threadColumns(db: DatabaseSync): string[] {
 }
 
 function expectHealthy(db: DatabaseSync): void {
-  expect(db.prepare("SELECT MAX(version) AS version FROM schema_migrations").get()).toEqual({ version: 66 });
+  expect(db.prepare("SELECT MAX(version) AS version FROM schema_migrations").get()).toEqual({ version: 75 });
   expect(db.prepare("PRAGMA foreign_keys").get()).toEqual({ foreign_keys: 1 });
   expect(db.prepare("PRAGMA foreign_key_check").all()).toEqual([]);
   expect(db.prepare("PRAGMA integrity_check").get()).toEqual({ integrity_check: "ok" });
@@ -97,7 +122,11 @@ describe("agent thread branch migration", () => {
     const before = contents(db);
     migrateOpenBotDatabase(db);
     expect(contents(db)).toEqual(withBranchLink(before));
-    expect(threadColumns(db).slice(-4, -1)).toEqual(BRANCH_COLUMNS);
+    expect(
+      threadColumns(db)
+        .filter((name) => name !== "causal_chain_id")
+        .slice(-4, -1),
+    ).toEqual(BRANCH_COLUMNS);
     expectHealthy(db);
   });
 
@@ -125,7 +154,11 @@ describe("agent thread branch migration", () => {
     db.exec("ALTER TABLE projection_agent_threads ADD COLUMN branch_source_thread_id TEXT");
     db.exec("UPDATE projection_agent_threads SET branch_source_thread_id='openbot-thread-chief' WHERE origin='user'");
     migrateOpenBotDatabase(db);
-    expect(threadColumns(db).slice(-4, -1)).toEqual(BRANCH_COLUMNS);
+    expect(
+      threadColumns(db)
+        .filter((name) => name !== "causal_chain_id")
+        .slice(-4, -1),
+    ).toEqual(BRANCH_COLUMNS);
     expect(
       db
         .prepare(
@@ -155,9 +188,9 @@ describe("agent thread branch migration", () => {
     seed(db);
     const before = contents(db);
     const columnsBefore = threadColumns(db);
-    db.exec("INSERT INTO schema_migrations VALUES(67,'now')");
+    db.exec("INSERT INTO schema_migrations VALUES(999,'now')");
     expect(() => migrateOpenBotDatabase(db)).toThrow("newer than this application supports");
-    db.exec("DELETE FROM schema_migrations WHERE version=67; DELETE FROM schema_migrations WHERE version=46");
+    db.exec("DELETE FROM schema_migrations WHERE version=999; DELETE FROM schema_migrations WHERE version=46");
     expect(() => migrateOpenBotDatabase(db)).toThrow("missing version 46");
     expect(contents(db)).toEqual(before);
     expect(threadColumns(db)).toEqual(columnsBefore);
@@ -168,7 +201,7 @@ describe("agent thread branch migration", () => {
     seed(db);
     migrateOpenBotDatabase(db);
     const after = contents(db);
-    db.exec("INSERT INTO schema_migrations VALUES(67,'now')");
+    db.exec("INSERT INTO schema_migrations VALUES(999,'now')");
     expect(() => migrateOpenBotDatabase(db)).toThrow("newer than this application supports");
     expect(contents(db)).toEqual(after);
   });
