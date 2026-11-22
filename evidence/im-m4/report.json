@@ -1,0 +1,258 @@
+{
+  "gate": "T14d1 M4 关卡：代聊与自动应答",
+  "script": "scripts/im-proxy-e2e.ts",
+  "milestone": "P1-M4",
+  "evidence": "evidence/im-m4",
+  "startedAt": "2026-11-22T09:54:18.170Z",
+  "finishedAt": "2026-11-22T09:54:18.648Z",
+  "gateClosed": true,
+  "counts": {
+    "pass": 8,
+    "fail": 0,
+    "blocked": 0,
+    "skip": 0
+  },
+  "cases": [
+    {
+      "id": "M4-01",
+      "title": "A6a 代聊开启：协议中 proxiedBy 存在",
+      "acceptance": "A6a",
+      "refs": ["design §10 A6a", "design 决策记录 1", "plan §3 T9 验收"],
+      "steps": [
+        "默认状态断言代聊为关",
+        "开启代聊后由助理代发一条消息",
+        "接收方解出的协议里带 proxiedBy",
+        "签名验签通过"
+      ],
+      "needs": [
+        {
+          "task": "T9",
+          "what": "代聊标记 + 真发信路径",
+          "artifact": "src/backend/im/messaging-driver.ts",
+          "ready": true
+        }
+      ],
+      "status": "pass",
+      "detail": "4 项断言通过；「签名验签通过」属 T3 信封层（对端互发），host 路径对本地撰写记 verified=false + 空 signature，不在本条要求",
+      "checks": [
+        "通过｜自己发言不带代聊标记（默认关）",
+        "通过｜缺陷：sendProxied 返回值应带 proxiedBy（现在返回的是 UPDATE 前的旧对象）｜返回值 proxiedBy=assistant-1",
+        "通过｜落库为 proxied_by + proxy_visibility",
+        "通过｜proxiedBy 与 proxyVisibility 必须成对（缺可见性拒）"
+      ],
+      "durationMs": 63
+    },
+    {
+      "id": "M4-02",
+      "title": "A6b proxyVisibility=hidden：标注隐藏但不可剥离",
+      "acceptance": "A6b",
+      "refs": ["design §10 A6b", "design 决策记录 1"],
+      "steps": [
+        "开启代聊并把可见性设为 hidden",
+        "代发一条消息",
+        "对方界面不显示代聊标注",
+        "对方导出（含导出文件）里也没有代聊标注"
+      ],
+      "needs": [
+        {
+          "task": "T9",
+          "what": "代聊标记不可剥离",
+          "artifact": "src/backend/im/proxy.ts",
+          "ready": true
+        }
+      ],
+      "status": "pass",
+      "detail": "4 项断言通过；A6b 的「对方 UI 不显示标注」已划出本用例范围：渲染归前端 T11b1/T16b1 截图证据；「导出文件里也没有标注」归消息导出 API，当前只有审计导出（audit-admin.export），无消息导出路径，故一并交前端证据。本用例只验「标注不可剥离」这一后端可验命题。",
+      "checks": [
+        "通过｜缺陷：sendProxied 返回值应带 proxyVisibility=hidden（现在返回的是 UPDATE 前的旧对象）｜返回值 proxyVisibility=hidden",
+        "通过｜标注不可剥离：读回仍在",
+        "通过｜hidden 只是展示层：协议层仍带 proxiedBy",
+        "通过｜对照：普通消息不带标记（标记不是谁都有）"
+      ],
+      "durationMs": 49
+    },
+    {
+      "id": "M4-03",
+      "title": "A6c 本地审计可证明真实发言人与时间",
+      "acceptance": "A6c",
+      "refs": ["design §10 A6c", "plan §3 T9 验收"],
+      "steps": [
+        "在 hidden 模式下任取一条代聊消息",
+        "本地审计能查到真实发言人（谁代发、代理谁）与真实时间",
+        "审计可导出，且不因对方不可见而在本地丢失"
+      ],
+      "needs": [
+        {
+          "task": "T9",
+          "what": "代聊审计",
+          "artifact": "src/backend/im/messaging-driver.ts",
+          "ready": true
+        },
+        {
+          "task": "T12a1",
+          "what": "审计写入",
+          "artifact": "src/backend/im/audit.ts",
+          "ready": true
+        }
+      ],
+      "status": "pass",
+      "detail": "4 项断言通过",
+      "checks": [
+        "通过｜审计记到真实发言人（谁代发）｜assistant-1",
+        "通过｜审计记到代理对象（代理谁）｜{\"proxiedOnBehalfOf\":\"person-1\"}",
+        "通过｜审计记到真实时间",
+        "通过｜hidden 不影响本地留痕"
+      ],
+      "durationMs": 51
+    },
+    {
+      "id": "M4-04",
+      "title": "代聊三态 + 标记不可剥离",
+      "acceptance": "A6a/b/c（三态）",
+      "refs": ["design §10 A6", "design 决策记录 1", "plan §3 T9 验收"],
+      "steps": [
+        "态一（关）：助理不代发，无 proxiedBy",
+        "态二（开且 shown）：proxiedBy 存在、对方 UI 可见标注",
+        "态三（开且 hidden）：proxiedBy 仍在协议里、对方 UI 不可见、本地留痕",
+        "对三态下的消息分别尝试剥离或伪造 proxiedBy 标记，必须失败（标记不可剥离）"
+      ],
+      "needs": [
+        {
+          "task": "T9",
+          "what": "代聊三态",
+          "artifact": "src/backend/im/proxy.ts",
+          "ready": true
+        }
+      ],
+      "status": "pass",
+      "detail": "5 项断言通过",
+      "checks": [
+        "通过｜态一（关）：无 proxiedBy",
+        "通过｜态二（开且 shown）：proxiedBy 存在",
+        "通过｜态三（开且 hidden）：返回值仍带标记、展示为 hidden｜返回值 assistant-1",
+        "通过｜标记不可剥离：三条读回的标记与写入一致",
+        "通过｜伪造/剥离标记被拒：只给 proxiedBy 缺可见性即拒"
+      ],
+      "durationMs": 54
+    },
+    {
+      "id": "M4-05",
+      "title": "A15 预算消耗可见",
+      "acceptance": "A15（消耗可见）",
+      "refs": ["design §10 A15", "plan §3 T9 验收"],
+      "steps": ["代聊产生消耗", "界面上能看到本月已消耗金额与上限", "消耗与实际计费一致"],
+      "needs": [
+        {
+          "task": "T9",
+          "what": "代聊预算",
+          "artifact": "src/backend/im/proxy.ts",
+          "ready": true
+        }
+      ],
+      "status": "pass",
+      "detail": "4 项断言通过",
+      "checks": [
+        "通过｜上限口径为 20 美元/月｜20",
+        "通过｜消耗可见：已消耗金额可读回｜5",
+        "通过｜消耗可见：上限可读回｜20",
+        "通过｜消耗与实际计费一致"
+      ],
+      "durationMs": 60
+    },
+    {
+      "id": "M4-06",
+      "title": "A15 达 20 美元/月自动暂停",
+      "acceptance": "A15（自动暂停）",
+      "refs": ["design §10 A15", "plan 决策：代聊成本上限 20 美元/月"],
+      "steps": ["把消耗推到 20 美元/月", "代聊自动暂停", "界面给出提示，说明是预算原因", "暂停后不再产生新的代发"],
+      "needs": [
+        {
+          "task": "T9",
+          "what": "代聊预算",
+          "artifact": "src/backend/im/proxy.ts",
+          "ready": true
+        }
+      ],
+      "status": "pass",
+      "detail": "6 项断言通过",
+      "checks": [
+        "通过｜花满 20 美元后不能再代发",
+        "通过｜超支拒发并返回 im.budgetExceeded（不是伪成功）",
+        "通过｜超支那条不落库（对照：已发的仍在）",
+        "通过｜预算只约束代聊：自己发言不受影响",
+        "通过｜对照组：换对端另起预算",
+        "通过｜跨月重置"
+      ],
+      "durationMs": 49
+    },
+    {
+      "id": "M4-07",
+      "title": "A15 调整上限记审计",
+      "acceptance": "A15（调整上限）",
+      "refs": ["design §10 A15"],
+      "steps": ["调整代聊预算上限", "审计记录调整人、旧值、新值、时间"],
+      "needs": [
+        {
+          "task": "T9",
+          "what": "预算上限可调整 + 审计",
+          "artifact": "src/backend/im/proxy.ts",
+          "ready": true
+        },
+        {
+          "task": "T12a1",
+          "what": "审计写入",
+          "artifact": "src/backend/im/audit.ts",
+          "ready": true
+        }
+      ],
+      "status": "pass",
+      "detail": "7 项断言通过",
+      "checks": [
+        "通过｜默认上限 20 美元/月",
+        "通过｜上限可设并生效",
+        "通过｜落库跨会话（新实例读回一致）",
+        "通过｜联调断言：写 5 美元 → 关库重开读回 5",
+        "通过｜非法上限拒",
+        "通过｜审计记录调整人、旧值、新值、时间",
+        "通过｜调整上限记审计（旧值→新值）"
+      ],
+      "durationMs": 101
+    },
+    {
+      "id": "M4-08",
+      "title": "单一主责自动应答不抢话 + 转交走事务 + R10 只说话不动手",
+      "acceptance": "A6（单一主责）",
+      "refs": ["design 决策记录 2", "plan §2 P1-M4 出口", "plan §8 结论 5 R10"],
+      "steps": [
+        "同一会话里有多个助理",
+        "只有单一主责自动应答",
+        "其余助理只在被 @ 或转交后才发言",
+        "转交用 DB 事务：primaryAssignee 变更与审计写入同事务，失败则一起回滚"
+      ],
+      "needs": [
+        {
+          "task": "T9",
+          "what": "单一主责链路 + R10 裁决点",
+          "artifact": "src/backend/im/proxy.ts",
+          "ready": true
+        }
+      ],
+      "status": "pass",
+      "detail": "11 项断言通过",
+      "checks": [
+        "通过｜主责唯一｜agent-1",
+        "通过｜其余助理是 assist（不抢话）",
+        "通过｜转交后主责唯一（事务内撤旧立新）",
+        "通过｜旧主责降为 assist",
+        "通过｜非主责转交被拒",
+        "通过｜无主责时转交被拒",
+        "通过｜R10：外部链只说话不动手",
+        "通过｜R10：外部链 execute 被拒",
+        "通过｜R10：外部链 speak 放行",
+        "通过｜对照组：本地链说话与动手都可",
+        "通过｜缺声明双拒"
+      ],
+      "durationMs": 50
+    }
+  ]
+}

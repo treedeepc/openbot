@@ -1,0 +1,241 @@
+# T14e M7 关卡：规模化 用例与结果
+
+- 脚本：`scripts/im-scale-e2e.ts`
+- 里程碑：P2-M7
+- 证据目录：`evidence/im-m7`
+- 跑完时间：2026-11-22T09:57:18.024Z
+- 关卡关闭：是
+- 计数：通过 12 / 失败 0 / 阻塞 0 / 跳过 0
+
+| 用例 ID | 验收 | 标题 | 前置 | 状态 | 说明 |
+| --- | --- | --- | --- | --- | --- |
+| M7-01 | A11（导出） | 审计导出：字段齐全且已脱敏 | T12a2（未交付） | ✅ 通过 | 5 项断言通过 |
+| M7-02 | A11（保留期） | 保留期：180 天后仅聚合表，清理动作本身有审计 | T12a2（未交付） | ✅ 通过 | 8 项断言通过 |
+| M7-03 | A13（多设备同步） | 多设备同步：联系人/黑名单/代聊/通知设置 | T12d（未交付） | ✅ 通过 | 8 项断言通过 |
+| M7-04 | A13（冲突合并） | 多设备冲突合并：并集、最近修改优先、记审计 | T12d（未交付） | ✅ 通过 | 4 项断言通过 |
+| M7-05 | A13（撤销联动） | 多设备：设备撤销联动 | T12d（未交付） | ✅ 通过 | 4 项断言通过 |
+| M7-06 | A17（15 语言） | A17 工程检查：im 文案 15 语言齐全且键集一致 | T13（未交付） | ✅ 通过 | 6 项断言通过 |
+| M7-07 | A17（窄检查） | A17 工程检查：窄检查通过（test:changed + typecheck + Biome 改动文件） | T13（未交付） | ✅ 通过 | 4 项断言通过；扫描口径（写死，防同类漏检）：①判断通过与否**一律按退出码（echo $?）**，不按输出字符串——`26/28 passed` 这类含 passed 的红行会被 `grep -v passed` 过滤掉，后端上轮就是这么漏看两处红的；②并行核验（我扫他改）必须**带上扫描时刻**，否则时点差会被误记成矛盾；③证据脚本扫描**必须含 test:changed**，它是窄检查的必含项，缺行=漏检。；webrtc-channel 判定口径：scripts/verify-im-webrtc-channel.ts 在 Bun 下 exit=134（@roamhq/wrtc 的 NAPI 崩在 uv_async_init），**必须走 Node 路径**（bun build --target=node --external:@roamhq/wrtc 后 node 跑）才 13/13。按退出码全扫它永远红，**这一份单独标注为例外**，不计入「坏脚本」。 |
+| M7-08 | A13/A17（能力缺失） | 能力缺失验收：im-* 未注册时桌面不显示入口 | T1c、T11c（未交付） | ✅ 通过 | 2 项断言通过；桌面入口由 WorkspacePageRail.tsx:74 / ImDesktopPage.tsx:15 读 server().compatibility.capabilities 后过 imEntrySupport 门控；三条平台用例共用这一个门控函数，平台差异在消费点。「点了报错」属前端证据，交 T11c |
+| M7-09 | A13/A17（能力缺失） | 能力缺失验收：im-* 未注册时 Web 不显示入口 | T16c（未交付） | ✅ 通过 | 3 项断言通过；Web 入口由 WebWorkspace.tsx:1326 读 workspace.state.capabilities 后过同一 imEntrySupport 门控；界面隐藏与「无失败提示」交前端 T16c 证据 |
+| M7-10 | A13/A17（能力缺失） | 能力缺失验收：im-* 未注册时移动端不显示入口 | T17c（未交付） | ✅ 通过 | 9 项断言通过；已声明 16 条全注册；imPanes 4 段；有 route 但未声明：无；移动端入口由 apps/mobile/src/features/im/model/im-port.tsx:25-26 过同一 imEntrySupport 门控；界面隐藏交前端 T17c 证据 |
+| M7-11 | A13（第三方中转） | 第三方中转：只转发密文、默认关闭、启用须明示暴露面 | T12e（未交付） | ✅ 通过 | 11 项断言通过；「启用须用户确认的界面」属 T11c/T16c/T17c 证据层；本用例验后端强制要求明示暴露面 |
+| M7-12 | A1–A17（覆盖自检） | 验收覆盖自检：A1–A17 与点名用例全部有对应用例 | — | ✅ 通过 | 4 项断言通过 |
+
+## 明细
+
+### M7-01 审计导出：字段齐全且已脱敏
+
+- 验收：A11（导出）
+- 设计/计划出处：design §10 A11、plan §3 T12a2 验收
+- 状态：✅ 通过（5 项断言通过）
+- 步骤 1：导出一段审计明细
+- 步骤 2：断言导出含 actor、信任域、action、target、result、correlationId、before-after、时间
+- 步骤 3：断言导出内容是脱敏后的值，不含原始敏感数据
+- 前置 T12a2：audit_aggregates + 180 天清理 + 导出
+- 通过｜导出字段齐（A11：actor/信任域/action/target/result/correlationId/before-after/时间）｜json=action,actorId,after,at,before,causalChainId,correlationId,id,result,sourceTrustDomain,targetId｜csv=id,actorId,sourceTrustDomain,action,targetId,result,correlationId,causalChainId,before,after,at
+- 通过｜导出已脱敏（密钥类键的值换成 [redacted]，原文不外泄）｜{"monthlyBudgetUsd":20,"apiKey":"[redacted]"}
+- 通过｜导出条数与写入一致｜2
+- 通过｜按时间窗过滤生效｜1
+- 通过｜对照：时间窗外的不导出
+
+### M7-02 保留期：180 天后仅聚合表，清理动作本身有审计
+
+- 验收：A11（保留期）
+- 设计/计划出处：design §10 A11、plan §3 T12a2 验收
+- 状态：✅ 通过（8 项断言通过）
+- 步骤 1：构造超过 180 天的审计明细
+- 步骤 2：跑清理，断言明细被清、聚合表仍在
+- 步骤 3：断言清理是唯一删除路径，别处不能删明细
+- 步骤 4：断言清理动作本身写了审计
+- 前置 T12a2：180 天清理作为唯一删除路径
+- 通过｜聚合按天桶滚进聚合表｜2023-04-28,2023-11-13
+- 通过｜聚合把 target 收敛为 *（否则是按 target 分桶，不是聚合）｜*,*
+- 通过｜聚合记了时间跨度
+- 通过｜180 天前的明细被清｜deleted=2 3->2
+- 通过｜清理动作本身写了审计（唯一删除路径留痕）｜im.auditPurge
+- 通过｜清理事件里记了 cutoff 与保留天数｜{"cutoff":1684448000000,"retentionDays":180}
+- 通过｜对照：未过期的明细不删
+- 通过｜对照：清理事件不被后续清理删掉（自保护）
+
+### M7-03 多设备同步：联系人/黑名单/代聊/通知设置
+
+- 验收：A13（多设备同步）
+- 设计/计划出处：design §10 A13、plan §3 T12d 验收
+- 状态：✅ 通过（8 项断言通过）
+- 步骤 1：同一账号两台设备，设备一改联系人、黑名单、代聊开关、通知设置
+- 步骤 2：设备二收到同步后四项一致
+- 步骤 3：设备二反向改动，设备一同样一致
+- 前置 T12d：多设备同步与冲突合并 + 设备撤销联动
+- 通过｜缺陷：联系人同步后状态一致（新对端应按同步状态落库，不是一律 pending）｜实测 state=accepted｜mergeContacts 对不存在的对端只调 request()，incoming 的 accepted/removed 丢失
+- 通过｜黑名单同步后一致
+- 通过｜代聊设置同步后一致
+- 通过｜通知设置同步后一致
+- 通过｜四项合并都记审计
+- 通过｜对照：设备二反向同步不重复写（同一对端去重）
+- 通过｜连带后果：同步 removed 到没历史的机器不能复活成 pending｜merged=removed find=removed
+- 通过｜对照：pending 的新对端照常建成 pending（不是一律 removed）
+
+### M7-04 多设备冲突合并：并集、最近修改优先、记审计
+
+- 验收：A13（冲突合并）
+- 设计/计划出处：design §10 A13、plan §3 T12d 验收
+- 状态：✅ 通过（4 项断言通过）
+- 步骤 1：两台设备离线时各自改动同一组设置
+- 步骤 2：重新上线合并：集合类取并集
+- 步骤 3：标量类取最近修改优先
+- 步骤 4：合并动作写审计，可查到合并前后的值
+- 前置 T12d：冲突合并规则
+- 通过｜集合类取并集且同对端去重｜merged=2
+- 通过｜标量类最近修改优先：旧设备的旧值不覆盖新值｜read=5 replaced=0
+- 通过｜对照：更新的值才覆盖
+- 通过｜合并动作写审计且可查合并前后的值｜{"budget":8,"previous":5}
+
+### M7-05 多设备：设备撤销联动
+
+- 验收：A13（撤销联动）
+- 设计/计划出处：design §10 A13、plan §3 T12d 验收
+- 状态：✅ 通过（4 项断言通过）
+- 步骤 1：撤销一台设备
+- 步骤 2：同步不再推给它
+- 步骤 3：其历史仍按证书有效期可验证
+- 步骤 4：撤销联动写审计
+- 前置 T12d：设备撤销联动
+- 通过｜撤销联动清掉该设备的队列｜dropped=1
+- 通过｜对照：别的设备不受影响
+- 通过｜撤销联动写审计
+- 通过｜同步不再推给已撤销设备（队列为空即无可推）
+
+### M7-06 A17 工程检查：im 文案 15 语言齐全且键集一致
+
+- 验收：A17（15 语言）
+- 设计/计划出处：design §10 A17、plan §3 T13 验收、plan 红线 5
+- 状态：✅ 通过（6 项断言通过）
+- 步骤 1：列出 packages/i18n/src/messages 下全部语言目录
+- 步骤 2：断言每个语言都有 im.ts，且键集完全一致
+- 步骤 3：跑 i18n:check，断言通过
+- 前置 T13：i18n 全量清理与汇总
+- 通过｜语言目录数量为 15｜实际 15：ar,de,en,es,fr,he,it,ja,ko,nl,pl,pt,ru,tr,zh
+- 通过｜每个语言都有 im.ts
+- 通过｜im 命名空间有键｜123 个键
+- 通过｜15 语言的 im 键集完全一致
+- 通过｜i18n:check 通过｜he: 15767 of 15877 keys translated
+it: 14765 of 15877 keys translated
+ja: 14765 of 15877 keys translated
+ko: 15017 of 15877 keys translated
+nl: 14959 of 15877 keys translated
+pl: 14958 of 15877 keys translated
+pt: 14769 of 15877 keys translated
+ru: 14789 of 15877 keys translated
+tr: 14765 of 15877 keys translated
+zh: 15210 of 15877 keys translated
+
+$ bun scripts/i18n-check.ts
+- 通过｜A17 工程检查（15 语言）全部通过
+
+### M7-07 A17 工程检查：窄检查通过（test:changed + typecheck + Biome 改动文件）
+
+- 验收：A17（窄检查）
+- 设计/计划出处：design §10 A17、plan 红线 5、AGENTS.md 窄检查
+- 状态：✅ 通过（4 项断言通过；扫描口径（写死，防同类漏检）：①判断通过与否**一律按退出码（echo $?）**，不按输出字符串——`26/28 passed` 这类含 passed 的红行会被 `grep -v passed` 过滤掉，后端上轮就是这么漏看两处红的；②并行核验（我扫他改）必须**带上扫描时刻**，否则时点差会被误记成矛盾；③证据脚本扫描**必须含 test:changed**，它是窄检查的必含项，缺行=漏检。；webrtc-channel 判定口径：scripts/verify-im-webrtc-channel.ts 在 Bun 下 exit=134（@roamhq/wrtc 的 NAPI 崩在 uv_async_init），**必须走 Node 路径**（bun build --target=node --external:@roamhq/wrtc 后 node 跑）才 13/13。按退出码全扫它永远红，**这一份单独标注为例外**，不计入「坏脚本」。）
+- 步骤 1：跑 test:changed（只跑改动影响到的测试）
+- 步骤 2：跑 typecheck:node（覆盖 scripts 与 backend）
+- 步骤 3：跑 Biome 只查改动文件
+- 步骤 4：三者都通过；禁止全仓跑
+- 前置 T13：全量 i18n 与窄检查汇总
+- 通过｜test:changed 通过｜失败文件：无｜2026-11-22T09:56:55.712Z ERROR [openbot-database-schema] OpenBot database migration to version 13 failed. {"name":"Error","message":"late failure","stack":"Error: late failure\n    at /Users/zhougm/WebstormProjects/openbot/src/backend/openbot-database-schema.ts:138:86\n    at withTransaction (/Users/zhougm/WebstormProjects/openbot/src/backend/database/sqlite-transaction.ts:7:20)\n    at runMigration (/Users/zhougm/WebstormProjects/openbot/src/backend/openbot-database-schema.ts:136:12)\n    at migrateOpenBotDatabase (/Users/zhougm/WebstormProjects/openbot/src/backend/openbot-database-schema.ts:44:20)\n    at /Users/zhougm/WebstormProjects/openbot/src/backend/agent-workspace-root-migration.test.ts:126:18\n    at Proxy.assertThrows (file:///Users/zhougm/WebstormProjects/openbot/node_modules/vitest/node_modules/@vitest/expect/node_modules/chai/index.js:2798:5)\n    at Proxy.methodWrapper (file:///Users/zhougm/WebstormProjects/openbot/node_modules/vitest/node_modules/@vitest/expect/node_modules/chai/index.js:1700:25)\n    at Proxy.<anonymous> (file:///Users/zhougm/WebstormProjects/openbot/node_modules/vitest/node_modules/@vitest/expect/dist/index.js:1216:12)\n    at Proxy.overwritingMethodWrapper (file:///Users/zhougm/WebstormProjects/openbot/node_modules/vitest/node_modules/@vitest/expect/node_modules/chai/index.js:1750:33)\n    at Proxy.<anonymous> (file:///Users/zhougm/WebstormProjects/openbot/node_modules/vitest/node_modules/@vitest/expect/dist/index.js:1552:16)"}
+2026-11-22T09:56:56.074Z ERROR [openbot-database-schema] OpenBot database migration to version 21 failed. {"name":"Error","message":"fixture stop","stack":"Error: fixture stop\n    at /Users/zhougm/WebstormProjects/openbot/src/backend/openbot-database-schema.ts:138:86\n    at withTransaction (/Users/zhougm/WebstormProjects/openbot/src/backend/database/sqlite-transaction.ts:7:20)\n    at runMigration (/Users/zhougm/WebstormProjects/openbot/src/backend/openbot-database-schema.ts:136:12)\n    at migrateOpenBotDatabase (/Users/zhougm/WebstormProjects/openbot/src/backend/openbot-database-schema.ts:44:20)\n    at /Users/zhougm/WebstormProjects/openbot/src/backend/computer-use-name-migration.test.ts:17:16\n    at Proxy.assertThrows (file:///Users/zhougm/WebstormProjects/openbot/node_modules/vitest/node_modules/@vitest/expect/node_modules/chai/index.js:2798:5)\n    at Proxy.methodWrapper (file:///Users/zhougm/WebstormProjects/openbot/node_modules/vitest/node_modules/@vitest/expect/node_modules/chai/index.js:1700:25)\n    at Proxy.<anonymous> (file:///Users/zhougm/WebstormProjects/openbot/node_modules/vitest/node_modules/@vitest/expect/dist/index.js:1216:12)\n    at Proxy.overwritingMethodWrapper (file:///Users/zhougm/WebstormProjects/openbot/node_modules/vitest/node_modules/@vitest/expect/node_modules/chai/index.js:1750:33)\n    at Proxy.<anonymous> (file:///Users/zhougm/WebstormProjects/openbot/node_modules/vitest/node_modules/@vitest/expect/dist/index.js:1552:16)"}
+2026-11-22T09:56:56.075Z WARN [openbot-database-schema] Renamed a saved MCP server, because Computer Use now uses its name. {"from":"Computer_Use","to":"computer_use_saved_2"}
+2026-11-22T09:56:56.075Z WARN [openbot-database-schema] Renamed a saved MCP server, because Computer Use now uses its name. {"from":"computer_use","to":"computer_use_saved_3"}
+2026-11-22T09:56:56.118Z ERROR [openbot-database-schema] OpenBot database migration to version 21 failed. {"name":"Error","message":"fixture stop","stack":"Error: fixture stop\n    at /Users/zhougm/WebstormProjects/openbot/src/backend/openbot-database-schema.ts:138:86\n    at withTransaction (/Users/zhougm/WebstormProjects/openbot/src/backend/database/sqlite-transaction.ts:7:20)\n    at runMigration (/Users/zhougm/WebstormProjects/openbot/src/backend/openbot-database-schema.ts:136:12)\n    at migrateOpenBotDatabase (/Users/zhougm/WebstormProjects/openbot/src/backend/openbot-database-schema.ts:44:20)\n    at /Users/zhougm/WebstormProjects/openbot/src/backend/computer-use-name-migration.test.ts:17:16\n    at Proxy.assertThrows (file:///Users/zhougm/WebstormProjects/openbot/node_modules/vitest/node_modules/@vitest/expect/node_modules/chai/index.js:2798:5)\n    at Proxy.methodWrapper (file:///Users/zhougm/WebstormProjects/openbot/node_modules/vitest/node_modules/@vitest/expect/node_modules/chai/index.js:1700:25)\n    at Proxy.<anonymous> (file:///Users/zhougm/WebstormProjects/openbot/node_modules/vitest/node_modules/@vitest/expect/dist/index.js:1216:12)\n    at Proxy.overwritingMethodWrapper (file:///Users/zhougm/WebstormProjects/openbot/node_modules/vitest/node_modules/@vitest/expect/node_modules/chai/index.js:1750:33)\n    at Proxy.<anonymous> (file:///Users/zhougm/WebstormProjects/openbot/node_modules/vitest/node_modules/@vitest/expect/dist/index.js:1552:16)"}
+2026-11-22T09:56:56.118Z WARN [openbot-database-schema] Renamed a saved MCP server, because Computer Use now uses its name. {"from":"Computer_Use","to":"computer_use_saved_2"}
+2026-11-22T09:56:56.118Z WARN [openbot-database-schema] Renamed a saved MCP server, because Computer Use now uses its name. {"from":"computer_use","to":"computer_use_saved_3"}
+2026-11-22T09:56:56.118Z ERROR [openbot-database-schema] OpenBot database migration to version 21 failed. {"name":"Error","message":"late failure","stack":"Error: late failure\n    at /Users/zhougm/WebstormProjects/openbot/src/backend/openbot-database-schema.ts:138:86\n    at withTransaction (/Users/zhougm/WebstormProjects/openbot/src/backend/database/sqlite-transaction.ts:7:20)\n    at runMigration (/Users/zhougm/WebstormProjects/openbot/src/backend/openbot-database-schema.ts:136:12)\n    at migrateOpenBotDatabase (/Users/zhougm/WebstormProjects/openbot/src/backend/openbot-database-schema.ts:44:20)\n    at /Users/zhougm/WebstormProjects/openbot/src/backend/computer-use-name-migration.test.ts:79:18\n    at Proxy.assertThrows (file:///Users/zhougm/WebstormProjects/openbot/node_modules/vitest/node_modules/@vitest/expect/node_modules/chai/index.js:2798:5)\n    at Proxy.methodWrapper (file:///Users/zhougm/WebstormProjects/openbot/node_modules/vitest/node_modules/@vitest/expect/node_modules/chai/index.js:1700:25)\n    at Proxy.<anonymous> (file:///Users/zhougm/WebstormProjects/openbot/node_modules/vitest/node_modules/@vitest/expect/dist/index.js:1216:12)\n    at Proxy.overwritingMethodWrapper (file:///Users/zhougm/WebstormProjects/openbot/node_modules/vitest/node_modules/@vitest/expect/node_modules/chai/index.js:1750:33)\n    at Proxy.<anonymous> (file:///Users/zhougm/WebstormProjects/openbot/node_modules/vitest/node_modules/@vitest/expect/dist/index.js:1552:16)"}
+2026-11-22T09:56:56.119Z WARN [openbot-database-schema] Renamed a saved MCP server, because Computer Use now uses its name. {"from":"Computer_Use","to":"computer_use_saved_2"}
+2026-11-22T09:56:56.119Z WARN [openbot-database-schema] Renamed a saved MCP server, because Computer Use now uses its name. {"from":"computer_use","to":"computer_use_saved_3"}
+2026-11-22T09:56:57.082Z ERROR [openbot-database-schema] OpenBot database migration to version 15 failed. {"name":"Error","message":"there is already a table named agent_usage_date","stack":"Error: there is already a table named agent_usage_date\n    at Object.up (/Users/zhougm/WebstormProjects/openbot/src/backend/migrations/0015-agent-usage.ts:45:18)\n    at /Users/zhougm/WebstormProjects/openbot/src/backend/openbot-database-schema.ts:137:17\n    at withTransaction (/Users/zhougm/WebstormProjects/openbot/src/backend/database/sqlite-transaction.ts:7:20)\n    at runMigration (/Users/zhougm/WebstormProjects/openbot/src/backend/openbot-database-schema.ts:136:12)\n    at migrateOpenBotDatabase (/Users/zhougm/WebstormProjects/openbot/src/backend/openbot-database-schema.ts:44:20)\n    at /Users/zhougm/WebstormProjects/openbot/src/backend/agent-usage-migration.test.ts:13:20\n    at Proxy.assertThrows (file:///Users/zhougm/WebstormProjects/openbot/node_modules/vitest/node_modules/@vitest/expect/node_modules/chai/index.js:2798:5)\n    at Proxy.methodWrapper (file:///Users/zhougm/WebstormProjects/openbot/node_modules/vitest/node_modules/@vitest/expect/node_modules/chai/index.js:1700:25)\n    at Proxy.<anonymous> (file:///Users/zhougm/WebstormProjects/openbot/node_modules/vitest/node_modules/@vitest/expect/dist/index.js:1216:12)\n    at Proxy.overwritingMethodWrapper (file:///Users/zhougm/WebstormProjects/openbot/node_modules/vitest/node_modules/@vitest/expect/node_modules/chai/index.js:1750:33)"}
+2026-11-22T09:56:58.099Z WARN [provider-runtimes] Provider runtime update failed. {"runtime":"antigravity","version":"1.5.4","installedVersion":null,"stage":"download","cause":{"name":"Error","code":null,"message":"OpenBot could not download https://github.com/google-antigravity/antigravity-cli/releases/download/1.5.4/agy_cli_linux_x64.tar.gz. open ~/proxy.conf failed with apiKey=[redacted]","cause":{"name":"TypeError","code":null,"message":"fetch failed","cause":{"name":"Error","code":null,"message":"open ~/proxy.conf failed with apiKey=[redacted]"}}}}
+- 通过｜typecheck:node 通过｜$ bun scripts/type-checker.ts --noEmit -p tsconfig.node.json
+- 通过｜Biome 检查改动文件通过｜scripts/im-collab-e2e.ts scripts/im-drift-probe.ts scripts/im-e2e-support.ts scripts/im-entry-rail-e2e.ts scripts/im-lan-peer.ts scripts/im-m1-e2e.ts scripts/im-m2-e2e.ts scripts/im-offline-e2e.ts scripts/im-proxy-e2e.ts scripts/im-route-e2e.ts scripts/im-scale-e2e.ts scripts/im-security-e2e.ts scripts/im-tcp-peer.ts scripts/im-team-api-e2e.ts｜Checked 14 files in 2s. No fixes applied.
+- 通过｜A17 工程检查（窄检查）全部通过
+
+### M7-08 能力缺失验收：im-* 未注册时桌面不显示入口
+
+- 验收：A13/A17（能力缺失）
+- 设计/计划出处：plan 红线 2 能力门控两处 + 阶段化、plan §3 T1c 验收
+- 状态：✅ 通过（2 项断言通过；桌面入口由 WorkspacePageRail.tsx:74 / ImDesktopPage.tsx:15 读 server().compatibility.capabilities 后过 imEntrySupport 门控；三条平台用例共用这一个门控函数，平台差异在消费点。「点了报错」属前端证据，交 T11c）
+- 步骤 1：用不含 im-* 能力的 host 连接
+- 步骤 2：桌面端不出现任何 IM 入口
+- 步骤 3：没有可点击路径进入 IM 界面
+- 步骤 4：不出现「点了报错」或任何失败提示
+- 前置 T1c：能力注册按阶段启用｜落点 `src/main/team-api/route-im.ts`｜已存在
+- 前置 T11c：界面搜索/审计导出/同步/中转开关
+- 通过｜无任何 im-* 能力时桌面不出现任何入口
+- 通过｜对照：能力齐备时入口出现（区分「门控关着」与「功能坏了」）
+
+### M7-09 能力缺失验收：im-* 未注册时 Web 不显示入口
+
+- 验收：A13/A17（能力缺失）
+- 设计/计划出处：plan 红线 2、plan §3 T16c 验收
+- 状态：✅ 通过（3 项断言通过；Web 入口由 WebWorkspace.tsx:1326 读 workspace.state.capabilities 后过同一 imEntrySupport 门控；界面隐藏与「无失败提示」交前端 T16c 证据）
+- 步骤 1：用不含 im-* 能力的 host 连接 Web 客户端
+- 步骤 2：Web 端不出现任何 IM 入口、无可点击路径、无失败提示
+- 前置 T16c：Web 搜索/审计/同步/中转切片
+- 通过｜无任何 im-* 能力时 Web 不出现任何入口
+- 通过｜无可点击路径：空能力下连 session 都不开
+- 通过｜对照：能力齐备时 Web 同样出入口
+
+### M7-10 能力缺失验收：im-* 未注册时移动端不显示入口
+
+- 验收：A13/A17（能力缺失）
+- 设计/计划出处：plan 红线 2、plan §3 T17c 验收
+- 状态：✅ 通过（9 项断言通过；已声明 16 条全注册；imPanes 4 段；有 route 但未声明：无；移动端入口由 apps/mobile/src/features/im/model/im-port.tsx:25-26 过同一 imEntrySupport 门控；界面隐藏交前端 T17c 证据）
+- 步骤 1：用不含 im-* 能力的 host 连接移动端
+- 步骤 2：移动端不出现任何 IM 入口、无可点击路径、无失败提示
+- 前置 T17c：移动端搜索/审计/同步/中转切片
+- 通过｜无任何 im-* 能力时移动端不出现任何入口
+- 通过｜声明了的能力都通了 route（没有只声明不实现）｜已声明 16 条
+- 通过｜无野 route：每条已处理 route 都归属某个已声明能力
+- 通过｜门控形态与注册结果一致：imPanes 4 段（inbox/contacts/session/devices）｜4 段：inbox,contacts,session,devices｜已声明 16 条
+- 通过｜16 条全注册后七段入口全开（inbox/contacts/session/devices/assign/block/report）｜{"inbox":true,"contacts":true,"session":true,"devices":true,"assign":true,"block":true,"report":true}
+- 通过｜对照：无 im-* 的旧 host 七项仍全 false（不是全都常开）｜{"inbox":false,"contacts":false,"session":false,"devices":false,"assign":false,"block":false,"report":false}
+- 通过｜对照：四段入口各由不同能力驱动（只留 peers+messages 时只剩 session 一段）
+- 通过｜发现 A 回归：IM route 真发真收（HTTP 编解码已接上）｜IM=200:{}｜坏body=400:A valid JSON object is required.
+- 通过｜对照：IM 带坏 body 仍被拒（codec 接上没把 fail-closed 弄松）｜IM=200:{}｜坏body=400:A valid JSON object is required.
+
+### M7-11 第三方中转：只转发密文、默认关闭、启用须明示暴露面
+
+- 验收：A13（第三方中转）
+- 设计/计划出处：plan §3 T12e 验收、design 决策记录
+- 状态：✅ 通过（11 项断言通过；「启用须用户确认的界面」属 T11c/T16c/T17c 证据层；本用例验后端强制要求明示暴露面）
+- 步骤 1：默认状态下中转关闭
+- 步骤 2：启用时界面明示暴露面，需用户确认
+- 步骤 3：中转只转发密文，不落明文
+- 步骤 4：中转开关与状态记审计
+- 前置 T12e：第三方中转：新实例消息类型、只转发密文、默认关闭
+- 通过｜默认状态下中转关闭｜false
+- 通过｜启用时必须明示暴露面（空暴露面直接拒）
+- 通过｜明示暴露面后才启用，且暴露面落库可读回
+- 通过｜留痕一：enable 写一条审计
+- 通过｜留痕二：disable 写一条审计
+- 通过｜默认关闭时转发被拒（im.lanDisabled）
+- 通过｜只转发密文：入队的是密文、不解密
+- 通过｜留痕三：relay 转发写一条审计
+- 通过｜审计里记了 enabled 与 exposedSurface（before/after）
+- 通过｜对照：审计链路本身没坏（同库别处的审计照常写）
+- 通过｜对照：关闭后暴露面清空
+
+### M7-12 验收覆盖自检：A1–A17 与点名用例全部有对应用例
+
+- 验收：A1–A17（覆盖自检）
+- 设计/计划出处：plan §5 验收映射、design §10 验收标准
+- 状态：✅ 通过（4 项断言通过）
+- 步骤 1：读取七个关卡的用例清单（其余六个取 evidence/im-m*/report.json，本关卡取自身注册的用例）
+- 步骤 2：断言 A1 到 A17 每一条都有至少一个对应用例
+- 步骤 3：断言点名用例都在：A13 设备用户流程、D2-1 到 D2-5、双发送方同 remoteMessageId、两成员共用设备不串收件箱、能力缺失隐藏入口
+- 步骤 4：把覆盖矩阵写进 evidence/im-m7/acceptance-coverage.md
+- 通过｜读到七个关卡的用例清单｜im-m1：28 条、im-m2：10 条、im-m3：17 条、im-m4：8 条、im-m5：13 条、im-m6：8 条、im-m7：12 条
+- 通过｜A1–A17 每条都有对应用例｜缺失：无
+- 通过｜点名用例全部覆盖｜无
+- 通过｜验收覆盖自检通过
+

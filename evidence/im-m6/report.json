@@ -1,0 +1,245 @@
+{
+  "gate": "T14d3 M6 关卡：协作与可靠性",
+  "script": "scripts/im-collab-e2e.ts",
+  "milestone": "P1-M6",
+  "evidence": "evidence/im-m6",
+  "startedAt": "2026-11-22T09:54:19.792Z",
+  "finishedAt": "2026-11-22T09:54:20.191Z",
+  "gateClosed": true,
+  "counts": {
+    "pass": 8,
+    "fail": 0,
+    "blocked": 0,
+    "skip": 0
+  },
+  "cases": [
+    {
+      "id": "M6-01",
+      "title": "撤回·在线已送达（2:00 内）",
+      "acceptance": "A5（场景一）",
+      "refs": ["design §10 A5", "design §129 撤回规则", "plan §3 T4c 验收"],
+      "steps": [
+        "两台机器在线，A 发消息并被 B 收下",
+        "2:00 内 A 撤回",
+        "双方显示墓碑，消息内容不再可见",
+        "附件同步删除",
+        "审计保留（脱敏摘要）"
+      ],
+      "needs": [
+        {
+          "task": "T4c",
+          "what": "撤回与墓碑",
+          "artifact": "src/backend/im/withdraw.ts",
+          "ready": true
+        }
+      ],
+      "status": "pass",
+      "detail": "4 项断言通过",
+      "checks": [
+        "通过｜2:00 内撤回成功",
+        "通过｜双方显示墓碑",
+        "通过｜内容不再可见（body 已换墓碑）",
+        "通过｜撤回通知只在 online 场景发给对方"
+      ],
+      "durationMs": 55
+    },
+    {
+      "id": "M6-02",
+      "title": "撤回·服务器离线队列中",
+      "acceptance": "A5（场景二）",
+      "refs": ["design §10 A5", "design §6.6"],
+      "steps": [
+        "B 离线，A 的消息在服务器离线队列里",
+        "2:00 内 A 撤回",
+        "队列里的密文不再投递给 B",
+        "B 上线后看到的是墓碑而不是原文"
+      ],
+      "needs": [
+        {
+          "task": "T4c",
+          "what": "撤回清离线队列",
+          "artifact": "src/backend/im/withdraw.ts",
+          "ready": true
+        }
+      ],
+      "status": "pass",
+      "detail": "13 项断言通过",
+      "checks": [
+        "通过｜前置：四条队列行都在｜n=4",
+        "通过｜离线队列场景撤回成功｜offline-queue",
+        "通过｜撤回时清离线队列（queueRemoved）｜true",
+        "通过｜B 上线看到的是墓碑",
+        "通过｜①按业务 id 存的队列行被清（remote_message_id=rm-2）",
+        "通过｜②按帧 nonce 存的队列行也被清（remote_message_id=nonce-lm-2，wire.ts 的真实写法）",
+        "通过｜③按 localMessageId 存的队列行也被清（remote_message_id=lm-2）",
+        "通过｜对照：没撤回的队列行照旧在（不是全清）｜n=1",
+        "通过｜wire ④fail-closed 未被放松：多塞未知字段仍拒（im.protocolError）",
+        "通过｜wire ①旧帧兼容：只有 nonce（无 remoteMessageId）仍能解，回落到 nonce",
+        "通过｜wire ②新帧带业务 id：remoteMessageId 原样落帧（不是被 nonce 顶掉）",
+        "通过｜对照：非队列场景撤回行为不变（scene=online、不谎称通知收件人）｜online/true",
+        "通过｜对照：非队列场景撤回不动别的队列行｜n=1"
+      ],
+      "durationMs": 45
+    },
+    {
+      "id": "M6-03",
+      "title": "撤回·局域网未送达",
+      "acceptance": "A5（场景三）",
+      "refs": ["design §10 A5", "design §10 A9"],
+      "steps": ["B 离线，消息处于局域网未送达、保留草稿状态", "2:00 内 A 撤回", "草稿不再自动重发，双方为墓碑"],
+      "needs": [
+        {
+          "task": "T4c",
+          "what": "撤回局域网未送达场景",
+          "artifact": "src/backend/im/withdraw.ts",
+          "ready": true
+        }
+      ],
+      "status": "pass",
+      "detail": "2 项断言通过",
+      "checks": ["通过｜局域网未送达场景撤回成功", "通过｜双方为墓碑"],
+      "durationMs": 49
+    },
+    {
+      "id": "M6-04",
+      "title": "撤回·已读后（双方墓碑）",
+      "acceptance": "A5（场景四）",
+      "refs": ["design §10 A5"],
+      "steps": [
+        "B 已读该消息",
+        "2:00 内 A 撤回",
+        "双方都显示墓碑（不是只在 A 侧消失）",
+        "附件同步删除，审计保留脱敏摘要"
+      ],
+      "needs": [
+        {
+          "task": "T4c",
+          "what": "撤回已读场景",
+          "artifact": "src/backend/im/withdraw.ts",
+          "ready": true
+        }
+      ],
+      "status": "pass",
+      "detail": "3 项断言通过",
+      "checks": ["通过｜已读场景撤回成功", "通过｜双方都显示墓碑", "通过｜对照：撤回后原文不再可见"],
+      "durationMs": 46
+    },
+    {
+      "id": "M6-05",
+      "title": "撤回 2:00 与 2:00+ε 边界（按签名时间）",
+      "acceptance": "A5（时间边界）",
+      "refs": ["design §10 A5", "design §129：2 分钟以签名时间为准，允许 ±30 秒"],
+      "steps": [
+        "在签名时间 2:00 处撤回，断言成功",
+        "在 2:00+ε（ε 在 ±30 秒容差内）撤回，断言结果与容差规则一致",
+        "超出容差撤回，断言返回 im.withdrawExpired",
+        "边界以签名时间为准，不以本地点击时间为准"
+      ],
+      "needs": [
+        {
+          "task": "T4c",
+          "what": "2:00 窗口边界",
+          "artifact": "src/backend/im/withdraw.ts",
+          "ready": true
+        }
+      ],
+      "status": "pass",
+      "detail": "4 项断言通过",
+      "checks": [
+        "通过｜窗口口径为 2:00｜120000",
+        "通过｜正好 2:00 可撤",
+        "通过｜2:00+ε 抛 im.withdrawExpired",
+        "通过｜超时那条内容不动（对照）"
+      ],
+      "durationMs": 47
+    },
+    {
+      "id": "M6-06",
+      "title": "通知抑制：免打扰、代聊去重、系统通知决定",
+      "acceptance": "A7（通知抑制）",
+      "refs": ["design §10 A7", "plan §3 T12b 验收"],
+      "steps": [
+        "开启免打扰后收到消息，断言不弹系统通知",
+        "代聊产生的连发消息去重，不逐条弹通知",
+        "拉黑对方后其消息不产生通知",
+        "关闭免打扰后通知恢复"
+      ],
+      "needs": [
+        {
+          "task": "T12b",
+          "what": "通知默认值/覆盖/免打扰/代聊去重",
+          "artifact": "src/backend/im/notifications.ts",
+          "ready": true
+        }
+      ],
+      "status": "pass",
+      "detail": "7 项断言通过",
+      "checks": [
+        "通过｜默认决定是通知且带预览",
+        "通过｜免打扰静默期不发",
+        "通过｜静默期后自动恢复",
+        "通过｜同一条代聊只通知一次",
+        "通过｜对照：不同消息不受去重影响",
+        "通过｜notifyOn=none 不发",
+        "通过｜恢复后通知回来且可不带预览"
+      ],
+      "durationMs": 62
+    },
+    {
+      "id": "M6-07",
+      "title": "外部不能拉人 + 未验证不能进频道",
+      "acceptance": "A10（频道限制）",
+      "refs": ["design §10 A10", "design 决策记录 4", "plan §3 T10 验收"],
+      "steps": [
+        "外部助理（默认成员身份）尝试把新成员拉进频道",
+        "必须被拒，且拒绝原因可读",
+        "管理员拉人正常",
+        "外部助理可被设为只读，只读时不能发言"
+      ],
+      "needs": [
+        {
+          "task": "T10",
+          "what": "外部频道三角色与拉人限制",
+          "artifact": "src/backend/im/channel-roles.ts",
+          "ready": true
+        }
+      ],
+      "status": "pass",
+      "detail": "3 项断言通过",
+      "checks": ["通过｜外部成员拉人被拒", "通过｜管理员拉人正常", "通过｜未验证不能进频道（im.notVerified）"],
+      "durationMs": 48
+    },
+    {
+      "id": "M6-08",
+      "title": "频道三角色、踢人/改角色、最后 admin 不可降级/被踢",
+      "acceptance": "A10（频道角色）",
+      "refs": ["design §10 A10", "design 决策记录 4"],
+      "steps": [
+        "分别给成员设 admin/readonly/member",
+        "每种角色的权限边界逐条验证",
+        "踢人后该成员立即失去频道访问",
+        "改角色后权限立即生效"
+      ],
+      "needs": [
+        {
+          "task": "T10",
+          "what": "三角色与最后 admin 保护",
+          "artifact": "src/backend/im/channel-roles.ts",
+          "ready": true
+        }
+      ],
+      "status": "pass",
+      "detail": "7 项断言通过",
+      "checks": [
+        "通过｜三角色口径齐",
+        "通过｜改角色立即生效",
+        "通过｜readonly 不能拉人",
+        "通过｜踢人后立即失去访问",
+        "通过｜最后一个 admin 不可降级",
+        "通过｜最后一个 admin 不可被踢",
+        "通过｜对照：验真后可进"
+      ],
+      "durationMs": 47
+    }
+  ]
+}

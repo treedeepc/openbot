@@ -1,0 +1,331 @@
+{
+  "gate": "T14b M2 关卡：收件箱与联系人",
+  "script": "scripts/im-m2-e2e.ts",
+  "milestone": "P0-M2",
+  "evidence": "evidence/im-m2",
+  "startedAt": "2026-11-22T09:54:17.526Z",
+  "finishedAt": "2026-11-22T09:54:18.007Z",
+  "gateClosed": true,
+  "counts": {
+    "pass": 10,
+    "fail": 0,
+    "blocked": 0,
+    "skip": 0
+  },
+  "cases": [
+    {
+      "id": "M2-01",
+      "title": "联系人请求→同意→列表",
+      "acceptance": "A10（加好友需本人确认）",
+      "refs": ["design §10 A10", "plan §2 P0-M2 出口"],
+      "steps": [
+        "外部助理 A 向本机发联系人请求",
+        "本机收到请求但不自动通过，需本人确认",
+        "本人同意后，双方进入联系人列表",
+        "请求、同意动作都可回看"
+      ],
+      "needs": [
+        {
+          "task": "T6",
+          "what": "contacts / contact_requests",
+          "artifact": "src/backend/im/social.ts",
+          "ready": true
+        }
+      ],
+      "status": "pass",
+      "detail": "5 项断言通过",
+      "checks": [
+        "通过｜请求入站、状态待确认",
+        "通过｜未经同意不进联系人列表",
+        "通过｜请求可回看（inbound 列表里能查到）",
+        "通过｜同意后进入联系人列表",
+        "通过｜同意后可按对端查到"
+      ],
+      "durationMs": 49
+    },
+    {
+      "id": "M2-02",
+      "title": "未验证外部助理：受限流",
+      "acceptance": "A10（限流）",
+      "refs": ["design §10 A10", "design §4.7", "plan §3 T6 验收"],
+      "steps": [
+        "未验证的外部助理出现在列表里，带「未验证」标记",
+        "尝试把它拉进频道，必须被拒",
+        "加好友必须本人确认",
+        "验证后以上限制解除"
+      ],
+      "needs": [
+        {
+          "task": "T6",
+          "what": "限速与冷却",
+          "artifact": "src/backend/im/social.ts",
+          "ready": true
+        },
+        {
+          "task": "T10",
+          "what": "外部不能进频道",
+          "artifact": null,
+          "ready": false
+        },
+        {
+          "task": "T2",
+          "what": "未验证标记（peers.verified_at）",
+          "artifact": null,
+          "ready": false
+        }
+      ],
+      "status": "pass",
+      "detail": "5 项断言通过",
+      "checks": [
+        "通过｜加好友请求超限被拦（需本人确认的入口也受限流）｜cooldown",
+        "通过｜冷却期单独计时｜60000",
+        "通过｜未验证标记可读（peers.verified_at 为空即未验证）",
+        "通过｜未验证不能进频道（im.notVerified）",
+        "通过｜对照：验真后可进"
+      ],
+      "durationMs": 44
+    },
+    {
+      "id": "M2-03",
+      "title": "指派后主责起草、由人确认发送",
+      "acceptance": "A4（草稿发送）",
+      "refs": ["plan §2 P0-M2 出口", "plan §3 T11a2 验收"],
+      "steps": [
+        "收到外部消息后指派主责助理",
+        "断言指派/转交本身不产生任何对外消息（im_messages 与 offline_queue 计数不变）",
+        "对照：真发出时确实落库（区别于「发不出去」）",
+        "「人点确认后才发」的界面硬规则属 T11a2 前端证据层，交前端截图"
+      ],
+      "needs": [
+        {
+          "task": "T9",
+          "what": "指派与单一主责",
+          "artifact": null,
+          "ready": false
+        },
+        {
+          "task": "T11a2",
+          "what": "界面草稿发送（人确认）",
+          "artifact": null,
+          "ready": false
+        }
+      ],
+      "status": "pass",
+      "detail": "4 项断言通过；「人点确认后才发」的界面硬规则属 T11a2 前端证据层（截图），不在本用例断言范围；本用例只验后端无自动发送路径",
+      "checks": [
+        "通过｜指派主责不产生任何对外消息｜sent 0->0 queued 0->0",
+        "通过｜加助理同样不产生对外消息｜sent 0->0 queued 0->0",
+        "通过｜转交主责同样不产生对外消息｜sent 0->0 queued 0->0",
+        "通过｜对照：真发出时确实落库（区别于「发不出去」）"
+      ],
+      "durationMs": 48
+    },
+    {
+      "id": "M2-04",
+      "title": "拉黑伪成功：对方看似已发送、不出现未送达/重发、不通知",
+      "acceptance": "A7（拉黑伪成功）",
+      "refs": ["design §10 A7", "design 决策记录 3", "plan §3 T6 验收"],
+      "steps": [
+        "本机拉黑外部助理 B",
+        "B 发消息，B 侧显示已发送（伪成功）",
+        "B 侧不出现未送达、不出现重发入口、不出现已读回执",
+        "B 侧不出现任何失败提示",
+        "本机不弹通知"
+      ],
+      "needs": [
+        {
+          "task": "T6",
+          "what": "双层拉黑伪成功",
+          "artifact": "src/backend/im/social.ts",
+          "ready": true
+        }
+      ],
+      "status": "pass",
+      "detail": "7 项断言通过",
+      "checks": [
+        "通过｜对照组：没被拦的确实 sent｜sent",
+        "通过｜对照组：可通知可重发",
+        "通过｜外层拉黑·对方看似已发送（伪成功）",
+        "通过｜外层拉黑·不出现未送达/重发",
+        "通过｜外层拉黑·不通知",
+        "通过｜外层拉黑·无失败提示（reason 是拦截而非错误）",
+        "通过｜双层拉黑·任一层拦下都伪成功"
+      ],
+      "durationMs": 45
+    },
+    {
+      "id": "M2-05",
+      "title": "拉黑后本机 blocked/discarded + 审计",
+      "acceptance": "A7（本机处置）",
+      "refs": ["design §10 A7", "plan §3 T6/T12a1 验收"],
+      "steps": [
+        "拉黑期间 B 发的每条消息在本机标记 blocked/discarded",
+        "不进入正常收件箱",
+        "每条都写审计，可查到发送方、时间、处置结果"
+      ],
+      "needs": [
+        {
+          "task": "T6",
+          "what": "双层拉黑伪成功",
+          "artifact": "src/backend/im/social.ts",
+          "ready": true
+        },
+        {
+          "task": "T12a1",
+          "what": "审计写入",
+          "artifact": "src/backend/im/audit.ts",
+          "ready": true
+        }
+      ],
+      "status": "pass",
+      "detail": "3 项断言通过",
+      "checks": [
+        "通过｜处置结果是 blocked/discarded｜blocked-discarded",
+        "通过｜每条都写审计、可查发送方与时间",
+        "通过｜处置结果可查｜blocked-discarded"
+      ],
+      "durationMs": 45
+    },
+    {
+      "id": "M2-06",
+      "title": "解除拉黑后新消息恢复、历史不补发",
+      "acceptance": "A7（解除拉黑）",
+      "refs": ["design §10 A7", "plan §3 T6 验收"],
+      "steps": ["解除对 B 的拉黑", "B 之后发的新消息正常收下", "拉黑期间被丢弃的历史消息不补发"],
+      "needs": [
+        {
+          "task": "T6",
+          "what": "拉黑增删查",
+          "artifact": "src/backend/im/social.ts",
+          "ready": true
+        }
+      ],
+      "status": "pass",
+      "detail": "4 项断言通过",
+      "checks": [
+        "通过｜拉黑期间是 discarded 而非 queued（没有可补发的积压）｜blocked-discarded",
+        "通过｜解除拉黑生效",
+        "通过｜解除后新消息恢复正常收下",
+        "通过｜对照组：拉黑仍在时仍被拦"
+      ],
+      "durationMs": 46
+    },
+    {
+      "id": "M2-07",
+      "title": "拉黑后发不进",
+      "acceptance": "A7（拉黑）",
+      "refs": ["plan §2 P0-M2 出口"],
+      "steps": ["拉黑后在搜索里查 B，查不到", "从本机主动向 B 发消息，发不进去"],
+      "needs": [
+        {
+          "task": "T6",
+          "what": "拉黑",
+          "artifact": "src/backend/im/social.ts",
+          "ready": true
+        },
+        {
+          "task": "T12c",
+          "what": "搜索服务（拉黑后搜不到）",
+          "artifact": null,
+          "ready": false
+        }
+      ],
+      "status": "pass",
+      "detail": "10 项断言通过；M2-07 特征刻画：命中条件是 display_name / peer_server_id / peer_agent_id 的 LIKE，不看 searchable（结果里 searchable 恒 true，未进 WHERE）；可见性要求有 im_threads 或 contacts 其一即可，会话不是必要条件；两条 block_rules 反连接（我拉黑他 / 他拉黑我）",
+      "checks": [
+        "通过｜本机主动发也被拦（发不进去）",
+        "通过｜出口被拦、伪成功不投递",
+        "通过｜命中条件是名字/ID 的 LIKE（按 peer_server_id 搜得到）",
+        "通过｜命中条件不是 searchable：结果里 searchable 恒为 true，不是可筛字段",
+        "通过｜会话不是必要条件：peer-d 只有联系人、无会话，仍可搜到",
+        "通过｜对照：既无会话也无联系人的 peer-c 不可见（可见性闸）",
+        "通过｜未拉黑时搜得到",
+        "通过｜被我拉黑的对象搜不到",
+        "通过｜对照：拉黑不影响搜别人",
+        "通过｜解除拉黑后恢复可搜"
+      ],
+      "durationMs": 55
+    },
+    {
+      "id": "M2-08",
+      "title": "限速与冷却生效",
+      "acceptance": "A10（限流）",
+      "refs": ["design §10 A10", "design §4.7", "plan §3 T6 验收"],
+      "steps": [
+        "按 §4.7 的限速与冷却参数压测发送频率",
+        "超限时被拒并返回 rateLimited",
+        "冷却后恢复",
+        "限速触发本身有审计"
+      ],
+      "needs": [
+        {
+          "task": "T6",
+          "what": "限速与冷却",
+          "artifact": "src/backend/im/social.ts",
+          "ready": true
+        }
+      ],
+      "status": "pass",
+      "detail": "6 项断言通过",
+      "checks": [
+        "通过｜超限被拒｜rate-limited",
+        "通过｜限速也走伪成功（不重发不通知）",
+        "通过｜窗口过后恢复｜ok",
+        "通过｜口径钉住：换一条消息（不同时刻、同一对端）不重置额度",
+        "通过｜对照组：换对端另起额度",
+        "通过｜冷却期按对端独立计"
+      ],
+      "durationMs": 61
+    },
+    {
+      "id": "M2-09",
+      "title": "审计写入：字段齐全且写入前脱敏",
+      "acceptance": "A11（写入）",
+      "refs": ["design §10 A11", "plan §3 T12a1 验收"],
+      "steps": [
+        "触发任一审计动作（联系人同意、拉黑、指派、举报）",
+        "断言明细含 actor、信任域、action、target、result、correlationId、before-after、时间",
+        "把一条带敏感标记的数据放进被审计对象，断言写入的审计里已经是脱敏后的值"
+      ],
+      "needs": [
+        {
+          "task": "T12a1",
+          "what": "审计写入",
+          "artifact": "src/backend/im/audit.ts",
+          "ready": true
+        }
+      ],
+      "status": "pass",
+      "detail": "3 项断言通过",
+      "checks": [
+        "通过｜明细含 actor/信任域/action/target/result/correlationId/时间",
+        "通过｜before/after 有留痕",
+        "通过｜写入前脱敏：敏感值不落库"
+      ],
+      "durationMs": 43
+    },
+    {
+      "id": "M2-10",
+      "title": "审计明细不可变",
+      "acceptance": "A11（不可变）",
+      "refs": ["design §10 A11", "plan §3 T12a1 验收"],
+      "steps": ["写入一条审计后尝试 UPDATE / DELETE", "必须失败或被拒，audit_log 只追加", "追加新事件不影响旧事件"],
+      "needs": [
+        {
+          "task": "T12a1",
+          "what": "审计只追加",
+          "artifact": "src/backend/im/audit.ts",
+          "ready": true
+        }
+      ],
+      "status": "pass",
+      "detail": "3 项断言通过",
+      "checks": [
+        "通过｜同 id 再写被主键拒绝且原事件未被篡改",
+        "通过｜ImAuditLog 只暴露追加与读取（无 update/delete）｜byCorrelation,constructor,list,read,record",
+        "通过｜追加新事件不影响旧事件"
+      ],
+      "durationMs": 45
+    }
+  ]
+}
