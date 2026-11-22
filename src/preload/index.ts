@@ -309,6 +309,26 @@ import {
   decodeDynamicIslandPresentation,
 } from "./dynamic-island-decoding";
 import { decodeHostReleaseStatusFromMain } from "./host-release-decoding";
+import {
+  decodeImBlocklistAddFromMain,
+  decodeImBlocklistListFromMain,
+  decodeImBlocklistRemoveFromMain,
+  decodeImContactAcceptFromMain,
+  decodeImContactRejectFromMain,
+  decodeImContactRemoveFromMain,
+  decodeImContactRequestFromMain,
+  decodeImContactsListFromMain,
+  decodeImMessageFromMain,
+  decodeImMessagesFromMain,
+  decodeImPeerFromMain,
+  decodeImPeersFromMain,
+  decodeImReportCreateFromMain,
+  decodeImReportsListFromMain,
+  decodeImThreadAssignFromMain,
+  decodeImThreadGetFromMain,
+  decodeImThreadsListFromMain,
+  decodeImThreadTransferFromMain,
+} from "./im-decoding";
 import { decodeMacAutomationResults } from "./mac-automation-decoding";
 import {
   decodeAddOrchestratorReply,
@@ -941,6 +961,26 @@ const openbotApi: OpenBotDesktopApi = {
     sourceSync: decodeCrmApplyResult,
     settings: decodeCrmSettings,
     setSettings: decodeCrmSettings,
+  }),
+  im: bridgeGroup(IPC_ENDPOINTS.im, {
+    messageSend: decodeImMessageFromMain,
+    messageList: decodeImMessagesFromMain,
+    peersList: decodeImPeersFromMain,
+    peerVerify: decodeImPeerFromMain,
+    threadsList: decodeImThreadsListFromMain,
+    threadGet: decodeImThreadGetFromMain,
+    threadAssign: decodeImThreadAssignFromMain,
+    threadTransfer: decodeImThreadTransferFromMain,
+    contactsList: decodeImContactsListFromMain,
+    contactRequest: decodeImContactRequestFromMain,
+    contactAccept: decodeImContactAcceptFromMain,
+    contactReject: decodeImContactRejectFromMain,
+    contactRemove: decodeImContactRemoveFromMain,
+    blocklistList: decodeImBlocklistListFromMain,
+    blocklistAdd: decodeImBlocklistAddFromMain,
+    blocklistRemove: decodeImBlocklistRemoveFromMain,
+    reportCreate: decodeImReportCreateFromMain,
+    reportsList: decodeImReportsListFromMain,
   }),
   routineResults: bridgeGroup(IPC_ENDPOINTS.routineResults, {
     options: decodeRoutineResultOptions,

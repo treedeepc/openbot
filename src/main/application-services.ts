@@ -432,6 +432,7 @@ import { SLACK_DEV_CALLBACK_PATH, startSlackDevCallbackServer } from "./slack-de
 import { SpeechPreferenceStore } from "./speech-preference-store";
 import { StartupTiming } from "./startup-timing";
 import { AGENT_CERTIFICATES_FILE, agentCertificateEnvironment } from "./system-certificates";
+import { createImTeamApiServices, type ImTeamApiServicesSource } from "./team-api/im-services";
 import { LEGACY_TEAM_STORE_FILE, TEAM_STORE_FILE, TeamStore } from "./team-store";
 import { TeamWebRtcBridge } from "./team-webrtc-bridge";
 import { TeamWebRtcClientTransport } from "./team-webrtc-client-transport";
@@ -634,6 +635,7 @@ export interface ApplicationServiceContext {
   forwardWorkflowNotice: (notice: WorkflowNotice) => void;
   prepareForUpdateInstall: () => Promise<void>;
   quitting: () => boolean;
+  imHostApi: ImTeamApiServicesSource["hostApi"];
 }
 
 export interface ApplicationServices {
@@ -991,6 +993,7 @@ export async function createApplicationServices({
   forwardWorkflowNotice,
   prepareForUpdateInstall,
   quitting,
+  imHostApi,
 }: ApplicationServiceContext): Promise<ApplicationServices> {
   performance.mark("openbot:services.start");
   teardown.push(
@@ -3052,9 +3055,15 @@ export async function createApplicationServices({
   };
   const remoteDesktopRuntimeCredentials = { username: "openbot", password: randomBytes(32).toString("base64url") };
   const attachmentPreviews = new AttachmentPreviews(join(app.getPath("userData"), "attachment-previews"));
+  const imServices = createImTeamApiServices({
+    database: () => store.database.connection,
+    identity: () => teamStore.getIdentity(),
+    hostApi: imHostApi,
+  });
   const host = new HostService({
     appVersion: app.getVersion(),
     store: teamStore,
+    imServices,
     agents: service,
     signInWaits: service.signInWaits,
     agentsReady: () => agentInitialization.awaitRoster(),

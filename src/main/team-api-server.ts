@@ -318,6 +318,7 @@ import { RemoteWorkflowError, remoteCall, toRemoteWorkflowError } from "./remote
 import { isClientUse } from "./team-api/client-use";
 import type { TeamApiMcpServerOwners, TeamApiOptions, TeamApiSidebarLayout } from "./team-api/dependencies";
 import { HttpError } from "./team-api/http-error";
+import { imCapabilityServicesReady } from "./team-api/im-services";
 import {
   hiddenAgentView,
   hiddenProviderAgentIds,
@@ -417,6 +418,7 @@ import { routeHostTimezone } from "./team-api/route-host-timezone";
 import { routeHostTurnLimits } from "./team-api/route-host-turn-limits";
 import { routeHostUpdate } from "./team-api/route-host-update";
 import { routeHostedSites } from "./team-api/route-hosted-sites";
+import { routeIm } from "./team-api/route-im";
 import { routeInstanceTransfer } from "./team-api/route-instance-transfer";
 import { routeInstanceTransferChunks } from "./team-api/route-instance-transfer-chunks";
 import { routeLibraryFolders } from "./team-api/route-library-folders";
@@ -1364,6 +1366,22 @@ export class TeamApiServer {
       )
         return;
       if ((await routeCrm(context, this.#options.crm)) === "handled") return;
+      if (
+        (await routeIm(
+          context,
+          this.#options.im,
+          this.#options.inbox,
+          this.#options.imChannels,
+          this.#options.imDelivery,
+          this.#options.imSettings,
+          this.#options.imNotifications,
+          this.#options.imProfile,
+          this.#options.imDevices,
+          this.#options.imDeactivate,
+          this.#options.imLan,
+        )) === "handled"
+      )
+        return;
       if ((await this.#routeEvents(context)) === "handled") return;
       if ((await routeAgentImport(context, this.#options.agentImport, newAgentHidden)) === "handled") return;
       if ((await routeHermesImport(context, this.#options.hermesImport, newAgentHidden)) === "handled") return;
@@ -2609,6 +2627,7 @@ export class TeamApiServer {
     const expanded = protocol !== null && protocol >= 7;
     return teamCapabilitiesVisibleToProtocol(TEAM_CURRENT_CAPABILITIES, protocol ?? TEAM_PROTOCOL_V1).filter(
       (capability) => {
+        if (!imCapabilityServicesReady(capability, this.#options)) return false;
         if (!expanded && !legacyTeamCapabilities([capability]).length) return false;
         if (
           capability === "channel-chats-v1" ||

@@ -99,6 +99,7 @@ import { RemoteWorkflowError, remoteDecode } from "./remote-service-effects";
 import { memberAuditChanges, memberAuditName, type ServerAuditStore } from "./server-audit-store";
 import { OWNER_PIN_KEY, type SidebarPinStore } from "./sidebar-pin-store";
 import type { TeamApiAgentNotificationLevels, TeamApiSidebarPins } from "./team-api/dependencies";
+import { type ImTeamApiServices, imTeamApiOptions } from "./team-api/im-services";
 import { TeamApiServer } from "./team-api-server";
 import type { RemoteDirectoryMember, TeamIdentity, TeamStore } from "./team-store";
 import type { TeamWebRtcBridge } from "./team-webrtc-bridge";
@@ -157,6 +158,7 @@ interface HostServiceOptions {
   workflows?: ForwardedApiOptions["workflows"];
   workflowFolders?: ForwardedApiOptions["workflowFolders"];
   crm?: ForwardedApiOptions["crm"];
+  imServices?: () => ImTeamApiServices | null;
   hiddenAgents?: ForwardedApiOptions["hiddenAgents"];
   routineRunPlaces?: ForwardedApiOptions["routineRunPlaces"];
   agentNotificationLevels?: AgentNotificationLevelStore;
@@ -531,6 +533,7 @@ export class HostService extends EventEmitter<HostEvents> {
       ...(this.#liveActivityPush === undefined ? {} : { liveActivityPush: this.#liveActivityPush }),
       ...(this.#pushNotifications === undefined ? {} : { pushNotifications: this.#pushNotifications }),
       ...(options.focusUse === undefined ? {} : { focusUse: options.focusUse }),
+      ...imTeamApiOptions(options.imServices ?? (() => null)),
     });
     this.#runtime = ManagedRuntime.make(
       Layer.succeed(

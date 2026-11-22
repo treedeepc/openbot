@@ -28,6 +28,11 @@ import type { AgentService } from "../../backend/agent-service";
 import type { BrowserHost } from "../../backend/browser-host";
 import type { ChannelService } from "../../backend/channel-service";
 import type { CrmPeopleOperations } from "../../backend/crm/crm-handle";
+import type { ImChannelRoles } from "../../backend/im/channel-roles";
+import type { ImDeliveryService } from "../../backend/im/delivery";
+import type { ImHostApi } from "../../backend/im/host-api";
+import type { ImService } from "../../backend/im/im-service";
+import type { ImInboxService } from "../../backend/im/inbox";
 import type { MailboxStore } from "../../backend/mailbox-store";
 import type { MessagingService } from "../../backend/messaging/messaging-service";
 import type { RoutineFlowsHandle } from "../../backend/routine-flows/routine-flows";
@@ -403,6 +408,54 @@ export type TeamApiWorkflows = Pick<
 
 export type TeamApiCrm = CrmPeopleOperations;
 
+export type TeamApiIm = Pick<
+  ImService,
+  "listPeers" | "verifyPeer" | "listMessages" | "sendMessage" | "peerVerifiedAt" | "sendFromClient" | "withdrawMessage"
+>;
+
+export type TeamApiSettings = Pick<ImHostApi, "readProxy" | "writeProxy">;
+
+export type TeamApiNotifications = Pick<ImHostApi, "readNotifications" | "writeNotifications">;
+
+export type TeamApiProfile = Pick<
+  ImHostApi,
+  "readProfile" | "updateProfile" | "readPresence" | "setHidden" | "listAudit" | "exportAudit" | "search"
+>;
+
+export type TeamApiDeactivate = Pick<ImHostApi, "deactivate">;
+
+export type TeamApiDevices = Pick<
+  ImHostApi,
+  "listDevices" | "enrollBegin" | "enrollApprove" | "enrollStatus" | "enrollCancel" | "deviceRevoke" | "peerDevices"
+>;
+
+export type TeamApiChannels = Pick<
+  ImChannelRoles,
+  "addByMember" | "removeByMember" | "changeRoleByMember" | "list" | "roleOf" | "self"
+>;
+
+export type TeamApiDelivery = Pick<ImDeliveryService, "list" | "read" | "ack" | "markRead" | "lastRead" | "resend">;
+
+export type TeamApiLan = Pick<ImHostApi, "lanPeers" | "lanSignal">;
+
+export type TeamApiInbox = Pick<
+  ImInboxService,
+  | "listThreads"
+  | "getThread"
+  | "assignThread"
+  | "transferThread"
+  | "listContacts"
+  | "requestContact"
+  | "acceptContact"
+  | "rejectContact"
+  | "removeContact"
+  | "listBlocklist"
+  | "addBlock"
+  | "removeBlock"
+  | "createReport"
+  | "listReports"
+>;
+
 interface TeamApiDefaultProvider {
   get(): Effect.Effect<ProviderDefaultSetting, { readonly cause: unknown }>;
   set(input: SaveSetupInput): Effect.Effect<ProviderDefaultSetting, { readonly cause: unknown }>;
@@ -627,6 +680,16 @@ export interface TeamApiOptions {
   routineFlows?: TeamApiRoutineFlows;
   workflows?: TeamApiWorkflows;
   crm?: TeamApiCrm;
+  im?: TeamApiIm;
+  inbox?: TeamApiInbox;
+  imChannels?: TeamApiChannels;
+  imSettings?: TeamApiSettings;
+  imNotifications?: TeamApiNotifications;
+  imProfile?: TeamApiProfile;
+  imDeactivate?: TeamApiDeactivate;
+  imDevices?: TeamApiDevices;
+  imDelivery?: TeamApiDelivery;
+  imLan?: TeamApiLan;
   hiddenAgents?: TeamApiHiddenAgents;
   routineRunPlaces?: TeamApiRoutineRunPlaces;
   agentNotificationLevels?: TeamApiAgentNotificationLevels;

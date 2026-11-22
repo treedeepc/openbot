@@ -1,5 +1,6 @@
 import { uptime } from "node:os";
 import { join, resolve } from "node:path";
+import type { DatabaseSync } from "node:sqlite";
 import { parseInviteUrl, selfHostedApiOrigin } from "@openbot/contracts/invite-links";
 import {
   type AgentEvent,
@@ -38,6 +39,11 @@ import { localTimezone } from "../backend/agent/routine-tools";
 import { replaceInvalidLinuxSystemLanguages } from "../backend/browser-policy";
 import { setDiskRestoreProbe } from "../backend/disk-restore";
 import { runCauseEffect } from "../backend/effect-boundary";
+import { ImHostApi } from "../backend/im/host-api";
+import { ImService } from "../backend/im/im-service";
+import { ImInboxService } from "../backend/im/inbox";
+import { createMdnsResponder } from "../backend/im/mdns-responder";
+import { createWrtcFactory } from "../backend/im/webrtc-factory";
 import { LATEST_SCHEMA_VERSION, NewerDatabaseError } from "../backend/openbot-database-schema";
 import { perfTime } from "../backend/perf-probe-hooks";
 import { OWNER_NOTIFICATION_KEY } from "./agent-notification-level-store";
@@ -98,6 +104,7 @@ import { githubConnectorIpcHandlers } from "./ipc/github-connector-handlers";
 import { hostAdminIpcHandlers } from "./ipc/host-admin-handlers";
 import { hostedServerIpcHandlers } from "./ipc/hosted-server-handlers";
 import { hostedSiteIpcHandlers } from "./ipc/hosted-site-handlers";
+import { imIpcHandlers } from "./ipc/im-handlers";
 import { instanceTransferIpcHandlers } from "./ipc/instance-transfer-handlers";
 import { licenseIpcHandlers } from "./ipc/license-handlers";
 import { linkAccountIpcHandlers } from "./ipc/link-account-handlers";
@@ -648,6 +655,20 @@ function showAppIcon(icon: NativeImage): void {
   backgroundTray?.setIcon(icon);
 }
 
+let imLanHostCache: ImHostApi | null = null;
+function imLanHost(connection: DatabaseSync, localServerId: string, publicKey: string): ImHostApi {
+  if (!imLanHostCache) {
+    const host = new ImHostApi(connection, localServerId, {}, null, {
+      responder: createMdnsResponder(),
+      turn: null,
+      factory: createWrtcFactory(),
+    });
+    imLanHostCache = host;
+    void host.lanStart({ name: localServerId, publicKey });
+  }
+  return imLanHostCache;
+}
+
 function attachQuitOnMainWindowClose(window: BrowserWindow): void {
   if (process.platform === "darwin") return;
   window.on("closed", () => {
@@ -982,6 +1003,45 @@ function registerIpcHandlers({
       remoteServers,
     }),
     ...crmIpcHandlers({ crm, remoteServers }),
+    ...imIpcHandlers({
+      im: () => {
+        const identity = teamStore.getIdentity();
+        const owner = teamStore.configured
+          ? teamStore.listMembers().find((member) => member.role === "owner")
+          : undefined;
+        return identity && owner
+          ? {
+              service: new ImService(service.channels.store.database.connection, identity.serverId),
+              memberId: owner.id,
+            }
+          : null;
+      },
+      inbox: () => {
+        const identity = teamStore.getIdentity();
+        const owner = teamStore.configured
+          ? teamStore.listMembers().find((member) => member.role === "owner")
+          : undefined;
+        return identity && owner
+          ? {
+              service: new ImInboxService(service.channels.store.database.connection, identity.serverId),
+              memberId: owner.id,
+            }
+          : null;
+      },
+      lan: () => {
+        const identity = teamStore.getIdentity();
+        const owner = teamStore.configured
+          ? teamStore.listMembers().find((member) => member.role === "owner")
+          : undefined;
+        return identity && owner
+          ? {
+              host: imLanHost(service.channels.store.database.connection, identity.serverId, identity.publicKey),
+              memberId: owner.id,
+            }
+          : null;
+      },
+      remoteServers,
+    }),
     ...routineResultIpcHandlers({ routineResults, remoteServers }),
     ...channelMemoryIpcHandlers({ service, remoteServers }),
     ...channelRoutineIpcHandlers({ service, remoteServers }),
@@ -1483,6 +1543,7 @@ if (!hasSingleInstanceLock) {
         forwardWorkflowNotice,
         prepareForUpdateInstall,
         quitting: () => quitStarted,
+        imHostApi: imLanHost,
       });
       services = built;
       performance.mark("openbot:services-built");
