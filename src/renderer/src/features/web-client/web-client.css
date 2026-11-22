@@ -449,3 +449,23 @@
 .web-other-tab-use.ui-button {
   min-width: 200px;
 }
+
+.web-im-page {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  height: 100%;
+}
+
+.web-im-panel {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 16px 24px 24px;
+}
+
+.web-im-empty {
+  margin: 0;
+  padding: 16px 24px;
+  color: var(--openbot-text-secondary);
+}

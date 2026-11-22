@@ -8,6 +8,7 @@ import { useUsage } from "../usage/usage-context";
 
 export type WindowPage =
   | "agents"
+  | "im"
   | "tasks"
   | "schedule"
   | "workflows"
@@ -176,6 +177,11 @@ const context = createSimpleContext({
         leavePricing();
         const serverId = activeServerId();
         if (serverId) usage.openLibrary(serverId, source);
+      },
+      openIm(source: HTMLElement | null) {
+        leavePricing();
+        const serverId = activeServerId();
+        if (serverId) usage.openIm(serverId, source);
       },
       openCrm(source: HTMLElement | null, connectors = false) {
         leavePricing();

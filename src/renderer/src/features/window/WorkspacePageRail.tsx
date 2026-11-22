@@ -1,6 +1,7 @@
 import { isUpdateActivePhase } from "@openbot/contracts/ipc";
 import { AGENT_TASKS_CAPABILITY } from "@openbot/contracts/team-protocol/agent-tasks-v1";
 import { CRM_CAPABILITY } from "@openbot/contracts/team-protocol/crm-v1";
+import { imEntrySupportFor } from "@openbot/team-client/im-client";
 import { ServerMenu } from "@openbot/ui/features/servers/ServerMenu";
 import { PageRail, type PageRailPage } from "@openbot/ui/features/window/PageRail";
 import { useText } from "@openbot/ui/text";
@@ -69,6 +70,15 @@ export function WorkspacePageRail(props: { hidden: boolean }) {
     return (button: HTMLElement) => openServerSettings(server.id, button, "providers");
   };
   const crmShown = () => serverCanAdminister(activeServer(), CRM_CAPABILITY) && usage.crmEnabled() === true;
+  function imRailAction(): ((button: HTMLElement) => void) | undefined {
+    const support = imEntrySupportFor(activeServer());
+    return support.session ? windowPage.openIm : undefined;
+  }
+
+  function imUnavailableReason(): string | undefined {
+    return imEntrySupportFor(activeServer()).session ? undefined : text.t("im.entry.unavailable");
+  }
+
   function crmRailAction(): ((button: HTMLElement) => void) | undefined {
     return crmShown() ? windowPage.openCrm : undefined;
   }
@@ -111,6 +121,8 @@ export function WorkspacePageRail(props: { hidden: boolean }) {
       onUsage={windowPage.openUsage}
       onLibrary={serverHasStorage(activeServer()) ? windowPage.openLibrary : undefined}
       onProviders={openProviders()}
+      onIm={imRailAction()}
+      imDisabledReason={imUnavailableReason()}
       onCrm={crmRailAction()}
       onCrmConnectors={crmConnectorsAction()}
       onMarketplace={() => {

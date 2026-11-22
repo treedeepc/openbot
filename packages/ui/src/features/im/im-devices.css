@@ -1,0 +1,115 @@
+.im-devices {
+  display: flex;
+  flex-direction: column;
+  gap: var(--openbot-space-3);
+  padding: var(--openbot-space-4);
+}
+
+.im-devices-title {
+  margin: 0;
+  font-size: var(--openbot-text-lg);
+  font-weight: var(--openbot-weight-semibold);
+}
+
+.im-devices-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--openbot-space-2);
+}
+
+.im-devices-challenge {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--openbot-space-3);
+  padding: var(--openbot-space-3);
+  border: 1px solid var(--openbot-border);
+  border-radius: var(--openbot-radius-md);
+  background: var(--openbot-bg-grouped);
+}
+
+.im-devices-pairing,
+.im-devices-fingerprint {
+  margin: 0;
+  color: var(--openbot-text-secondary);
+  font-size: var(--openbot-text-sm);
+}
+
+.im-devices-pairing strong,
+.im-devices-fingerprint strong {
+  color: var(--openbot-text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.im-devices-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--openbot-space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.im-devices-empty {
+  margin: 0;
+  color: var(--openbot-text-muted);
+  font-size: var(--openbot-text-md);
+}
+
+.im-device {
+  display: flex;
+  align-items: center;
+  gap: var(--openbot-space-3);
+  padding: var(--openbot-space-2) var(--openbot-space-3);
+  border: 1px solid var(--openbot-border-grouped);
+  border-radius: var(--openbot-radius-md);
+  background: var(--openbot-bg-grouped);
+}
+
+.im-device-id {
+  flex: 1 1 auto;
+  overflow: hidden;
+  color: var(--openbot-text-primary);
+  font-size: var(--openbot-text-md);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.im-device-status {
+  color: var(--openbot-text-muted);
+  font-size: var(--openbot-text-sm);
+}
+
+.im-device[data-status="pending"] .im-device-status {
+  color: var(--openbot-warning-text);
+}
+
+.im-device[data-status="revoked"] .im-device-status {
+  color: var(--openbot-danger-text);
+}
+
+.im-devices-key,
+.im-device-fingerprint {
+  margin: 0;
+  overflow-wrap: anywhere;
+  color: var(--openbot-text-secondary);
+  font-size: var(--openbot-text-sm);
+}
+
+.im-devices-key strong,
+.im-device-fingerprint strong {
+  color: var(--openbot-text-primary);
+  font-weight: var(--openbot-weight-medium);
+}
+
+.im-devices-expiry {
+  margin: 0;
+  color: var(--openbot-text-muted);
+  font-size: var(--openbot-text-sm);
+}
+
+.im-devices-expired {
+  margin: 0;
+  color: var(--openbot-danger-text);
+  font-size: var(--openbot-text-sm);
+}

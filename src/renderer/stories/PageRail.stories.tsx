@@ -129,10 +129,15 @@ function RailPreview(props: {
   usageRows?: PageRailProps["usageRows"];
   mediaCredits?: readonly MediaCreditsRailRow[];
   crm?: boolean;
+  im?: "ready" | "unavailable";
 }) {
   const { t } = useText();
   const [current, setCurrent] = createSignal<PageRailPage | null>("agents");
-  const [pinned, setPinned] = createSignal<readonly PageRailPinnablePage[]>(props.crm ? ["usage", "crm"] : ["usage"]);
+  const [pinned, setPinned] = createSignal<readonly PageRailPinnablePage[]>([
+    "usage",
+    ...(props.crm ? (["crm"] as const) : []),
+    ...(props.im ? (["im"] as const) : []),
+  ]);
   function crmAction(): (() => void) | undefined {
     if (!props.crm) return undefined;
     return () => setCurrent("crm");
@@ -155,6 +160,8 @@ function RailPreview(props: {
           customAgentUsage={props.customAgentUsage}
           mediaCredits={props.mediaCredits}
           onMediaCredits={fn()}
+          onIm={props.im === "ready" ? () => setCurrent("agents") : undefined}
+          imDisabledReason={props.im === "unavailable" ? t("im.entry.unavailable") : undefined}
           onAgents={() => setCurrent("agents")}
           onSchedule={() => setCurrent("schedule")}
           onUsage={() => setCurrent("usage")}
@@ -206,6 +213,14 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {};
+
+export const ImEntryAvailable: Story = {
+  args: { im: "ready" },
+};
+
+export const ImEntryUnavailable: Story = {
+  args: { im: "unavailable" },
+};
 
 export const SettingsNotice: Story = {
   args: { updateReady: true },

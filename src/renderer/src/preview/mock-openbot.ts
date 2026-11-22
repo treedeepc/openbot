@@ -242,6 +242,7 @@ import { createMockHostTimezone } from "./mock-host-timezone";
 import { createMockHostTurnLimits } from "./mock-host-turn-limits";
 import { createMockHostUpdate, type MockHostUpdateOptions } from "./mock-host-update";
 import { createMockHostedServers } from "./mock-hosted-servers";
+import { createMockIm } from "./mock-im";
 import { createMockLicense } from "./mock-license";
 import { createMockLinkAccount } from "./mock-link-account";
 import { createMockMessaging } from "./mock-messaging";
@@ -1649,6 +1650,54 @@ export function createMockOpenBot(options: MockOpenBotOptions = {}): MockOpenBot
       () => emitAgentEvent({ type: "workflow-folders-changed" }),
     ),
     crm: mockCrm(options.crm ?? {}, () => emitAgentEvent({ type: "crm-changed" })),
+    im: (() => {
+      const port = createMockIm();
+      return {
+        messageSend: async (input: {
+          threadId: string;
+          remoteMessageId: string;
+          body: string;
+          attachments: readonly { name: string; digest: string; size: number }[];
+          replyTo: string | null;
+        }) =>
+          (
+            await port.messages.send(
+              input.threadId,
+              input.remoteMessageId,
+              input.body,
+              [...input.attachments],
+              input.replyTo,
+            )
+          ).message,
+        messageList: async (input: { threadId: string }) => port.messages.list(input.threadId),
+        peersList: async () => port.peers.list(),
+        threadsList: () => port.threads.list(),
+        threadGet: (input) => port.threads.get(input.threadId),
+        threadAssign: (input) => port.threads.assign(input.threadId, input.assignees, input.primary),
+        threadTransfer: (input) => port.threads.transfer(input.threadId, input.toAgent),
+        contactsList: () => port.contacts.list(),
+        contactRequest: (input) =>
+          port.contacts.request({ peerServerId: input.peerServerId, peerAgentId: input.peerAgentId }),
+        contactAccept: (input) => port.contacts.accept(input.contactId),
+        contactReject: (input) => port.contacts.reject(input.contactId),
+        contactRemove: (input) => port.contacts.remove(input.contactId),
+        blocklistList: () => port.blocklist.list(),
+        blocklistAdd: (input) =>
+          port.blocklist.add({ peerServerId: input.peerServerId, peerAgentId: input.peerAgentId }),
+        blocklistRemove: (input) => port.blocklist.remove(input).then(() => port.blocklist.list()),
+        reportCreate: (input) => port.reports.create(input.targetPeer, input.category),
+        reportsList: () => port.reports.list(),
+        peerVerify: async (input: { peerServerId: string; peerAgentId: string; fingerprint: string }) => {
+          await port.peers.verify(input.fingerprint);
+          const listed = await port.peers.list();
+          const found = listed.items.find(
+            (peer) => peer.peerServerId === input.peerServerId && peer.peerAgentId === input.peerAgentId,
+          );
+          if (!found) throw new Error("im.notFound");
+          return { ...found, verified: true };
+        },
+      };
+    })(),
     routineResults: mockRoutineResults(routines, options, (agentId) =>
       emitAgentEvent({ type: "routines-changed", agentId }),
     ),

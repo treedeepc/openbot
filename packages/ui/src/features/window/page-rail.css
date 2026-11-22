@@ -336,3 +336,9 @@
   > .agent-context-icon {
   color: var(--openbot-text-primary);
 }
+
+.window-rail-more-reason {
+  margin-inline-start: auto;
+  color: var(--openbot-text-muted);
+  font-size: var(--openbot-text-xs);
+}

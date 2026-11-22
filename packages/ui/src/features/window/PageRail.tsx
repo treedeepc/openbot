@@ -12,6 +12,7 @@ import {
   Ellipsis,
   GalleryVerticalEnd,
   ListChecks,
+  MessagesSquare,
   MotionTooltip,
   Pin,
   PinOff,
@@ -73,25 +74,34 @@ function RailButton(props: {
   menu?: readonly RailMenuItem[] | undefined;
   onClick: (button: HTMLElement) => void;
   onPreload?: (() => void) | undefined;
+  disabledReason?: string | undefined;
   children: JSX.Element;
 }) {
   const [menuOpen, setMenuOpen] = createSignal(false);
-  const plain = () => (
-    <Button
-      variant="ghost"
-      type="button"
-      class={props.class ? `window-rail-button ${props.class}` : "window-rail-button"}
-      aria-label={props.label}
-      aria-current={props.current ? "page" : undefined}
-      onPointerEnter={() => props.onPreload?.()}
-      onFocus={() => props.onPreload?.()}
-      onClick={(event) => props.onClick(event.currentTarget)}
-    >
-      {props.children}
-    </Button>
-  );
+  const plain = () => {
+    const button = (
+      <Button
+        variant="ghost"
+        type="button"
+        class={props.class ? `window-rail-button ${props.class}` : "window-rail-button"}
+        aria-label={props.label}
+        aria-current={props.current ? "page" : undefined}
+        disabled={props.disabledReason !== undefined}
+        onPointerEnter={() => props.onPreload?.()}
+        onFocus={() => props.onPreload?.()}
+        onClick={(event) => props.onClick(event.currentTarget)}
+      >
+        {props.children}
+      </Button>
+    );
+    return props.disabledReason === undefined ? (
+      button
+    ) : (
+      <MotionTooltip content={props.disabledReason}>{button}</MotionTooltip>
+    );
+  };
   const button = () => (
-    <Show when={props.menu} fallback={plain()}>
+    <Show when={props.disabledReason === undefined ? props.menu : undefined} fallback={plain()}>
       {(items) => {
         let element: HTMLElement | undefined;
         return (
@@ -371,6 +381,7 @@ function MediaCreditsButton(props: { row: MediaCreditsRailRow; onOpen: (button: 
 
 export type PageRailPage =
   | "agents"
+  | "im"
   | "workflows"
   | "tasks"
   | "schedule"
@@ -382,6 +393,7 @@ export type PageRailPage =
   | "settings";
 
 export const PAGE_RAIL_PINNABLE_PAGES = [
+  "im",
   "workflows",
   "tasks",
   "schedule",
@@ -404,6 +416,8 @@ export interface PageRailProps {
   mediaCredits?: readonly MediaCreditsRailRow[] | undefined;
   onMediaCredits?: ((provider: MediaCreditsRailRow["provider"]) => void) | undefined;
   onAgents: () => void;
+  onIm?: ((button: HTMLElement) => void) | undefined;
+  imDisabledReason?: string | undefined;
   onWorkflows?: (() => void) | undefined;
   onPreloadWorkflows?: (() => void) | undefined;
   onTasks?: ((button: HTMLElement) => void) | undefined;
@@ -428,6 +442,7 @@ interface RailPage {
   open: (button: HTMLElement) => void;
   preload?: (() => void) | undefined;
   menu?: readonly RailMenuItem[] | undefined;
+  disabledReason?: string | undefined;
 }
 
 function RailMoreMenu(props: {
@@ -471,12 +486,16 @@ function RailMoreMenu(props: {
             {(page) => (
               <div role="none" class="window-rail-more-row" data-pinned={pinned(page().id) ? "" : undefined}>
                 <DropdownMenu.Item
+                  disabled={page().disabledReason !== undefined}
                   onPointerEnter={() => page().preload?.()}
                   onFocus={() => page().preload?.()}
                   onSelectAfterClose={() => trigger && page().open(trigger)}
                 >
                   <Dynamic component={page().icon} class="agent-context-icon size-4" aria-hidden="true" />
                   <span>{page().label}</span>
+                  <Show when={page().disabledReason}>
+                    {(reason) => <span class="window-rail-more-reason">{reason()}</span>}
+                  </Show>
                 </DropdownMenu.Item>
                 <DropdownMenu.CheckboxItem
                   class="window-rail-more-pin"
@@ -571,6 +590,16 @@ export function PageRail(props: PageRailProps) {
   const pages = createMemo((): RailPage[] => {
     const list: RailPage[] = [];
     const { onWorkflows, onTasks, onSchedule } = props;
+    const onIm = props.onIm;
+    if (onIm || props.imDisabledReason) {
+      list.push({
+        id: "im",
+        label: t("app.rail.im"),
+        icon: MessagesSquare,
+        open: onIm ?? (() => undefined),
+        disabledReason: props.imDisabledReason,
+      });
+    }
     if (onWorkflows) {
       list.push({
         id: "workflows",
@@ -616,7 +645,7 @@ export function PageRail(props: PageRailProps) {
   const shortcutPages = createMemo((): { id: PageRailPage; open: () => void }[] => [
     { id: "agents", open: () => props.onAgents() },
     ...pages()
-      .filter((page) => props.pinned.includes(page.id))
+      .filter((page) => props.pinned.includes(page.id) && page.disabledReason === undefined)
       .map((page) => ({ id: page.id, open: () => page.open(rail ?? document.body) })),
   ]);
 
@@ -670,6 +699,7 @@ export function PageRail(props: PageRailProps) {
             <RailButton
               label={page().label}
               current={props.current === page().id}
+              disabledReason={page().disabledReason}
               menu={[
                 ...(page().menu ?? []),
                 { label: t("sidebar.unpin"), icon: PinOff, open: () => props.onPinChange(page().id, false) },

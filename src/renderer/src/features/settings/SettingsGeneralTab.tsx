@@ -37,7 +37,7 @@ import { SidebarChatOrderSelect } from "@openbot/ui/features/settings/SidebarCha
 import { WorkspaceShortcutRow } from "@openbot/ui/features/settings/WorkspaceShortcutRow";
 import { WORKSPACE_SHORTCUT_NAMES, type WorkspaceShortcutName } from "@openbot/ui/features/window/workspace-shortcuts";
 import { useText } from "@openbot/ui/text";
-import { createUniqueId, For, Show } from "solid-js";
+import { createSignal, createUniqueId, For, Show } from "solid-js";
 import { useInstalledFonts } from "../../app-fonts";
 import { useAppearanceChoice } from "../../appearance-choice";
 import { setChatBubbleStyle, useChatBubbleStyle } from "../../chat-bubble-style-preference";
@@ -45,6 +45,10 @@ import { useI18n } from "../../i18n-context";
 import { useInterfaceSizeChoice } from "../../interface-size";
 import { useLayout } from "../../layout";
 import { useLogoColorChoice } from "../../logo-color";
+import { desktopImPort } from "../im/desktop-im-port";
+import { ImSettingsPanel } from "../im/ImSettingsPanel";
+import { useServers } from "../servers/servers-context";
+import { useWindowPage } from "../window/window-page-context";
 import {
   setWorkspaceShortcut,
   useWorkspaceShortcutBindings,
@@ -77,6 +81,9 @@ interface SettingsGeneralTabProps {
 
 export function SettingsGeneralTab(props: SettingsGeneralTabProps) {
   const i18n = useI18n();
+  const { activeServerId } = useServers();
+  const windowPage = useWindowPage();
+  const [imNetworking, setImNetworking] = createSignal({ lanDiscovery: true, selfHosted: true });
   const layout = useLayout();
   const storedShortcuts = useWorkspaceShortcutStored();
   const shortcutBindings = useWorkspaceShortcutBindings();
@@ -274,6 +281,15 @@ export function SettingsGeneralTab(props: SettingsGeneralTabProps) {
                 />
               </Show>
             </ItemGroup>
+          </SettingsSection>
+          <SettingsSection title={i18n.t("im.settings.title")}>
+            <ImSettingsPanel
+              port={desktopImPort(activeServerId())}
+              networking={imNetworking()}
+              onNetworkingChange={setImNetworking}
+              lanDiscoverySupported
+              onOpenIm={(button) => windowPage.openIm(button)}
+            />
           </SettingsSection>
         </Show>
       </Show>

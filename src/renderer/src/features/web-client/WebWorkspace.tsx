@@ -202,6 +202,7 @@ import { queuedDeliveriesInOrder } from "../../queue-reconciliation";
 import { backgroundWorkKey } from "../conversation/background-work-key";
 import "katex/contrib/copy-tex";
 import "../../selection-copy";
+import { imHostPort } from "@openbot/team-client/im-host-port";
 import { actionToast } from "../../action-toast";
 import { desktopAnalytics } from "../../analytics";
 import { collectThreadMessageMatches, formatMessageTime, toAgentMessage } from "../../app-message-projection";
@@ -333,6 +334,7 @@ import { workflowAgentProgress } from "../workflows/workflow-agent-progress";
 import { createWorkflowMediaCredits } from "../workflows/workflow-media-credits";
 import { WebAgentSettings } from "./WebAgentSettings";
 import { WebConnectComputer } from "./WebConnectComputer";
+import { WebImPage } from "./WebImPage";
 import { WebMobileNavigation, type WebMobilePane } from "./WebMobileNavigation";
 import { WebServerOtherTab } from "./WebServerOtherTab";
 import { createWebAccountCalls } from "./web-account";
@@ -352,6 +354,7 @@ import { webCrmHost } from "./web-crm";
 import { createWebFileSaver } from "./web-file-download";
 import { webGitHubConnectorPort } from "./web-github-connector";
 import { createWebHostedServers } from "./web-hosted-server-state";
+import { type ImHostPort, imEntryAvailable, imEntrySupportFor } from "./web-im";
 import { createWebInstanceTransferCalls } from "./web-instance-transfer";
 import { webMachineCalls } from "./web-machine-calls";
 import { createWebAgentTemplateCalls, createWebMarketplaceCalls } from "./web-marketplace";
@@ -403,7 +406,7 @@ async function reportedFailure(send: () => Promise<unknown>, options: PromptAnsw
   }
 }
 
-type HostPageView = "usage" | "schedule" | "tasks" | "workflows" | "library" | "crm";
+type HostPageView = "usage" | "schedule" | "tasks" | "workflows" | "library" | "crm" | "im";
 
 type WebWorkspaceProps = {
   accountId: string;
@@ -416,6 +419,7 @@ type WebWorkspaceProps = {
   accountSessionEnded?: () => boolean;
   onLogout: () => Promise<void>;
   createRuntime?: WebRuntimeFactory | undefined;
+  createIm?: (() => ImHostPort) | undefined;
   agentTemplateId?: string | null;
   onAgentTemplateClose?: () => void;
   inviteUrl?: string | null;
@@ -1317,6 +1321,25 @@ function WebWorkspaceFrame(props: WebWorkspaceProps) {
       const id = server()?.id;
       if (id) void openHostPage(id, "workflows", null);
     };
+  }
+  const imPort = createMemo(() => props.createIm?.() ?? imHostPort({ request: () => hostRequest() }));
+  const imSupport = () => imEntrySupportFor(server());
+  createEffect(
+    () => page() === "im" && !imPort(),
+    (unsupported) => {
+      if (unsupported) setHostPage(null);
+    },
+  );
+  function imRailAction(): ((button: HTMLElement) => void) | undefined {
+    if (!imPort() || !imEntryAvailable(imSupport())) return undefined;
+    return (button) => {
+      const id = server()?.id;
+      if (id) void openHostPage(id, "im", button);
+    };
+  }
+
+  function imUnavailableReason(): string | undefined {
+    return imPort() && imEntryAvailable(imSupport()) ? undefined : text.t("im.entry.unavailable");
   }
   const onePasswordPort = webOnePasswordConnectorPort(() => hostRequest());
   const bitwardenPort = webBitwardenConnectorPort(() => hostRequest());
@@ -2742,6 +2765,8 @@ function WebWorkspaceFrame(props: WebWorkspaceProps) {
               onPinChange={layout.setRailPinned}
               usageRows={usageRows()}
               onAgents={showAgentsPage}
+              onIm={imRailAction()}
+              imDisabledReason={imUnavailableReason()}
               onTasks={
                 tasksSupported()
                   ? (button) => {
@@ -3031,6 +3056,27 @@ function WebWorkspaceFrame(props: WebWorkspaceProps) {
                             routinePorts={scheduleRoutinePorts(target(), runtime)}
                           />
                         </Loading>
+                      </Match>
+                      <Match when={page() === "im"}>
+                        <Show when={imPort()} keyed>
+                          {(port) => (
+                            <Loading>
+                              <WebImPage
+                                port={port}
+                                support={imSupport()}
+                                hostName={target().name}
+                                network={workspace.state.status === "online" ? "server" : "offline"}
+                                onBack={closeHostPage}
+                                agentName={(agentId) =>
+                                  workspace.profiles().find((agent) => agent.id === agentId)?.name
+                                }
+                                agents={workspace.profiles().map((agent) => ({ id: agent.id, name: agent.name }))}
+                                drafts={() => controller.threadDrafts()}
+                                setDrafts={controller.setThreadDrafts}
+                              />
+                            </Loading>
+                          )}
+                        </Show>
                       </Match>
                     </Switch>
                   )}
