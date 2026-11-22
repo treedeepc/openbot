@@ -36,6 +36,7 @@ export const messages = {
   "mobile.app.route.workflowRun": "הרצה",
   "mobile.app.route.routine": "שגרה",
   "mobile.app.route.threads": "שרשורים",
+  "mobile.app.route.im": "IM",
   "mobile.app.route.usage": "שימוש",
   "mobile.app.route.remoteDesktop": "שליטה במחשב",
   "mobile.app.route.marketplace": "חנות",

@@ -50,6 +50,7 @@ export const messages = {
   "app.rail.label": "页面",
   "app.rail.website": "OpenBot 网站",
   "app.rail.agents": "助手",
+  "app.rail.im": "IM",
   "app.rail.schedule": "日程",
   "app.rail.tasks": "任务",
   "app.rail.workflows": "工作流",

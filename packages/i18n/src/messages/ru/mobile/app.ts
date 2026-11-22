@@ -36,6 +36,7 @@ export const messages = {
   "mobile.app.route.workflowRun": "Запуск",
   "mobile.app.route.routine": "Регулярная задача",
   "mobile.app.route.threads": "Ветки",
+  "mobile.app.route.im": "IM",
   "mobile.app.route.usage": "Использование",
   "mobile.app.route.marketplace": "Каталог",
   "mobile.app.route.library": "Библиотека",

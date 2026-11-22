@@ -50,6 +50,7 @@ export const messages = {
   "app.rail.label": "Sayfalar",
   "app.rail.website": "OpenBot web sitesi",
   "app.rail.agents": "Ajanlar",
+  "app.rail.im": "IM",
   "app.rail.schedule": "Zamanlama",
   "app.rail.tasks": "Görevler",
   "app.rail.workflows": "İş akışları",

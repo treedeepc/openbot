@@ -18,6 +18,7 @@ import { messages as crm } from "./crm";
 import { messages as customProvider } from "./customProvider";
 import { messages as dialog } from "./dialog";
 import { messages as files } from "./files";
+import { messages as im } from "./im";
 import { messages as importAgent } from "./import";
 import { messages as island } from "./island";
 import { messages as marketplace } from "./marketplace";
@@ -54,6 +55,7 @@ import { messages as workflow } from "./workflow";
 
 export const pl = {
   ...shared,
+  ...im,
   ...source,
   ...menu,
   ...notification,

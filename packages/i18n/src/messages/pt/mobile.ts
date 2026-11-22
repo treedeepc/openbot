@@ -1,5 +1,6 @@
 import type { PartialTranslation } from "../../message";
 import type { AppMobileMessages } from "../en/mobile";
+import { messages as im } from "./im";
 import { messages as mobileAgent } from "./mobile/agent";
 import { messages as mobileApp } from "./mobile/app";
 import { messages as mobileAppLock } from "./mobile/appLock";
@@ -23,6 +24,7 @@ import { source } from "./source";
 
 export const ptMobile = {
   ...shared,
+  ...im,
   ...source,
   ...mobileApp,
   ...mobileAppLock,

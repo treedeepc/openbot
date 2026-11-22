@@ -35,6 +35,7 @@ export const messages = defineMessages("mobile.app", {
   "mobile.app.route.workflowRun": "Run",
   "mobile.app.route.routine": "Routine",
   "mobile.app.route.threads": "Threads",
+  "mobile.app.route.im": "IM",
   "mobile.app.route.usage": "Usage",
   "mobile.app.route.remoteDesktop": "Control computer",
   "mobile.app.route.marketplace": "Marketplace",

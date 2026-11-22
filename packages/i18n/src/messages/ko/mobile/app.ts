@@ -36,6 +36,7 @@ export const messages = {
   "mobile.app.route.workflowRun": "실행",
   "mobile.app.route.routine": "루틴",
   "mobile.app.route.threads": "스레드",
+  "mobile.app.route.im": "IM",
   "mobile.app.route.usage": "사용량",
   "mobile.app.route.marketplace": "마켓플레이스",
   "mobile.app.route.library": "라이브러리",
