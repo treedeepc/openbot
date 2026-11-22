@@ -8,7 +8,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { CRM_TABLES_AFTER_MIGRATION } from "./crm/crm-schema";
 import { runCauseEffect } from "./effect-boundary";
 import { THREAD_EVENT_COMPACTION_TABLES_AFTER_MIGRATION } from "./migrations/0065-thread-event-compaction";
-import { IM_TABLES_AFTER_MIGRATION } from "./migrations/0067-im";
+import { IM_TABLES_AFTER_MIGRATION } from "./migrations/0068-im";
 import { OpenBotDatabase } from "./openbot-database";
 import { migrateOpenBotDatabase } from "./openbot-database-schema";
 
@@ -91,7 +91,7 @@ function pinTables(db: DatabaseSync) {
 }
 
 function expectHealthy(db: DatabaseSync): void {
-  expect(db.prepare("SELECT MAX(version) AS version FROM schema_migrations").get()).toEqual({ version: 75 });
+  expect(db.prepare("SELECT MAX(version) AS version FROM schema_migrations").get()).toEqual({ version: 76 });
   expect(db.prepare("PRAGMA foreign_keys").get()).toEqual({ foreign_keys: 1 });
   expect(db.prepare("PRAGMA foreign_key_check").all()).toEqual([]);
   expect(db.prepare("PRAGMA integrity_check").get()).toEqual({ integrity_check: "ok" });

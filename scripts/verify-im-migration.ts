@@ -2,7 +2,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
-import { IM_SCHEMA_SQL } from "../src/backend/migrations/0067-im";
+import { IM_SCHEMA_SQL } from "../src/backend/migrations/0068-im";
 import { migrateOpenBotDatabase } from "../src/backend/openbot-database-schema";
 import { record, text } from "./verify-im-helpers";
 

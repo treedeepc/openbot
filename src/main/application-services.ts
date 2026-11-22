@@ -66,6 +66,7 @@ import {
   nativeImage,
   net,
   powerMonitor,
+  powerSaveBlocker,
   screen,
   shell,
   systemPreferences,
@@ -126,6 +127,7 @@ import { UserBrowsingLog } from "../backend/user-browsing-log";
 import { UserFilesBytes } from "../backend/user-files-bytes";
 import { WORKFLOW_FOLDERS_FILE, WorkflowFoldersStore } from "../backend/workflow-folders-store";
 import { clearFlatBackground } from "../backend/workflows/flat-background";
+import { workflowFileOwners } from "../backend/workflows/workflow-file-owners";
 import { WorkflowGitHubStore } from "../backend/workflows/workflow-github-store";
 import { WorkflowRunStore } from "../backend/workflows/workflow-run-store";
 import { WorkflowStore } from "../backend/workflows/workflow-store";
@@ -192,6 +194,7 @@ import { BrowserViewClient } from "./browser-view-client";
 import { BrowsingMemoryPreferenceStore } from "./browsing-memory-preference-store";
 import { BusyMessageModePreferenceStore } from "./busy-message-mode-preference-store";
 import { type CentralAuthManager, isHostNotOnAccount } from "./central-auth-manager";
+import { type ChannelFolders, createChannelFolders } from "./channel-folders";
 import { ChatVisualPreviewer } from "./chat-visual-preview";
 import {
   type ClaudeCompactWindowControl,
@@ -204,6 +207,7 @@ import {
   createClaudeUserSetupPreferenceStore,
 } from "./claude-user-setup-preference-store";
 import { createComputerIdle } from "./computer-idle";
+import { ComputerUseDisplayAwake } from "./computer-use-display-awake";
 import { ComputerUseHighlightController } from "./computer-use-highlight-window";
 import { applicationBundlePath, applicationIconName } from "./computer-use-permission-app";
 import { ComputerUsePermissionHelpWindowController } from "./computer-use-permission-help-window";
@@ -229,6 +233,7 @@ import { type CustomProviderChanges, createCustomProviderChanges } from "./custo
 import { CustomProviderStore } from "./custom-provider-store";
 import { MCP_OAUTH_REDIRECT_URL } from "./deep-link-router";
 import { desktopShowsAgentEvent } from "./desktop-notifications";
+import { DetachedBrowserWindow } from "./detached-browser-window";
 import { shouldAutoStartHost } from "./development-profile";
 import {
   applyDevelopmentRemoteAccount,
@@ -315,6 +320,7 @@ import { localSkillTools } from "./local-skill-tools";
 import { createLoginItem } from "./login-item";
 import { LogoColorService } from "./logo-color-service";
 import type { MacHapticFeedback } from "./mac-haptic-feedback";
+import { restartFromInstalledCopy } from "./mac-installed-copy";
 import { hidePanelFromWindowSwitchers } from "./mac-panel-activation";
 import { MAC_PERMISSION_URLS } from "./mac-permission-urls";
 import { MACHINE_ALERTS_PREFERENCE_FILE, MachineAlertMonitor, MachineAlertPreferenceStore } from "./machine-alerts";
@@ -567,6 +573,7 @@ const TEARDOWN_ORDER = {
   mcpHostSignIns: 29,
   browser: 30,
   browserPictureInPicture: 40,
+  detachedBrowserWindow: 40.5,
   localSignIn: 41,
   browserDock: 42,
   browserView: 45,
@@ -663,6 +670,7 @@ export interface ApplicationServices {
   workflowFoldersService: WorkflowFoldersService;
   browser: BrowserHost;
   browserPictureInPicture: BrowserPictureInPicture;
+  detachedBrowserWindow: DetachedBrowserWindow;
   localSignIn: LocalSignInWindows;
   browserDock: BrowserDockOverlay;
   browserView: BrowserViewClient;
@@ -681,6 +689,7 @@ export interface ApplicationServices {
   agentHostSettings: AgentHostSettingsService;
   agentDefaultsSettings: AgentDefaultsSettingsService;
   agentFolders: AgentFolders;
+  channelFolders: ChannelFolders;
   agentInstructions: AgentInstructionsFiles;
   browserProfiles: BrowserProfileService;
   language: LanguageService;
@@ -1366,6 +1375,23 @@ export async function createApplicationServices({
     },
   });
   teardown.push(TEARDOWN_ORDER.browserPictureInPicture, "picture in picture", () => browserPictureInPicture.destroy());
+  const detachedBrowserWindow = new DetachedBrowserWindow({
+    mainWindow,
+    browser,
+    preloadPath: join(__dirname, "../preload/index.cjs"),
+    iconPath: appIconPath,
+    title: () => language.translate("browser.panel.label"),
+    ...(developmentUrl === undefined ? {} : { developmentUrl }),
+    onEvent: (event) => {
+      const window = windows.getMainWindow();
+      if (!window || window.isDestroyed()) return;
+      sendToRenderer(window, IPC_ENDPOINTS.browser.windowEvent, event);
+    },
+    onModel: (window, model) => {
+      sendToRenderer(window, IPC_ENDPOINTS.browser.windowModel, model);
+    },
+  });
+  teardown.push(TEARDOWN_ORDER.detachedBrowserWindow, "the browser window", () => detachedBrowserWindow.destroy());
   const localSignIn = new LocalSignInWindows();
   teardown.push(TEARDOWN_ORDER.localSignIn, "the local sign-in window", () => Effect.runPromise(localSignIn.discard()));
   const browserDock = new BrowserDockOverlay({
@@ -1843,6 +1869,13 @@ export async function createApplicationServices({
     quitting,
   });
   teardown.push(TEARDOWN_ORDER.cuaDriver, "the Computer Use driver", () => runCauseEffect(cuaDriver.stop()));
+  const computerUseDisplayAwake = new ComputerUseDisplayAwake({
+    turnRunning: () => service.earliestRunningTurnStartedAt() !== null,
+    start: () => powerSaveBlocker.start("prevent-display-sleep"),
+    stop: (id) => powerSaveBlocker.stop(id),
+  });
+  if (process.platform === "darwin") cuaDriver.onToolCall(() => computerUseDisplayAwake.noteToolCall());
+  teardown.push(TEARDOWN_ORDER.cuaDriver, "the Computer Use display hold", () => computerUseDisplayAwake.release());
   const computerUseReads = new CuaDriverDaemonClient(() =>
     cuaDriver.mcpServerForProviders() ? cuaDriver.socketPath() : null,
   );
@@ -1922,6 +1955,11 @@ export async function createApplicationServices({
       config.command === "npx" &&
       catalogPluginSlug(config, catalogPluginServers, homedir()) !== null,
   );
+  const workflowStore = new WorkflowStore({
+    database: store.database,
+    nextDueAt: workflowScheduleDueAt(() => serverTimezone.effective()),
+  });
+  const workflowRuns = new WorkflowRunStore({ database: store.database });
   const userData = app.getPath("userData");
   const storageSources = {
     roots: {
@@ -1953,6 +1991,12 @@ export async function createApplicationServices({
           )
         : null,
     ...(hostedServer ? { userFiles: new UserFilesBytes(userData, homedir()) } : {}),
+    workflowFiles: () =>
+      workflowFileOwners({
+        outputs: () => workflowRuns.mediaOutputs(),
+        workflows: () => workflowStore.list(),
+        folders: (workflowIds) => workflowFolders.getSnapshot({ workflowIds }),
+      }),
   };
   const storageUsage = new StorageUsageService(new StorageUsageScanner(storageSources), storageSources);
   teardown.push(TEARDOWN_ORDER.storageUsage, "storage scans", () => Effect.runPromise(storageUsage.dispose()));
@@ -2230,10 +2274,6 @@ export async function createApplicationServices({
     }),
   );
   teardown.push(TEARDOWN_ORDER.routineFlows, "the routine flows", () => Effect.runPromise(routineFlowRuntime.close()));
-  const workflowStore = new WorkflowStore({
-    database: store.database,
-    nextDueAt: workflowScheduleDueAt(() => serverTimezone.effective()),
-  });
   const githubRest = createGitHubRest({
     fetch: (url, init) => fetch(url, init),
     tokens: (repository) => githubConnector.repositoryTokens(repository),
@@ -2243,7 +2283,7 @@ export async function createApplicationServices({
   const workflowRuntime = await Effect.runPromise(
     createWorkflows({
       store: workflowStore,
-      runs: new WorkflowRunStore({ database: store.database }),
+      runs: workflowRuns,
       github: new WorkflowGitHubStore({ database: store.database }),
       githubApp: () => githubAppConfig()?.slug ?? null,
       watchGitHub: (repositories) => githubRelay.setRepositories(repositories),
@@ -2490,6 +2530,7 @@ export async function createApplicationServices({
   );
   service.on("event", (event) => {
     if (event.type === "turn-started") startComputerUseHighlight();
+    if (event.type === "turn-completed" && !event.continues) computerUseDisplayAwake.turnEnded();
   });
   if (!setupState.completed || service.enabledMcpServers().length > 0)
     Effect.runFork(providerRuntimes.ensureToolRuntimes());
@@ -2740,6 +2781,11 @@ export async function createApplicationServices({
   const agentHostSettings = createAgentHostSettings({ agents: service, busyMessageMode, agentDefaults });
   const agentDefaultsSettings = createAgentDefaultsSettings({ agents: service, agentDefaults, busyMessageMode });
   const agentFolders = createAgentFolders({ service, userDataPath: app.getPath("userData") });
+  const channelFolders = createChannelFolders({
+    service,
+    userDataPath: app.getPath("userData"),
+    browse: agentFolders.browse,
+  });
   const agentInstructions = createAgentInstructionsFiles(service);
   const browserProfiles = createBrowserProfileService({
     store: browserProfileStore,
@@ -3134,6 +3180,7 @@ export async function createApplicationServices({
       agentHost: agentHostSettings,
       agentDefaults: agentDefaultsSettings,
       folders: agentFolders,
+      channelFolders,
       instructions: agentInstructions,
       sessionSettings: service,
       acpRegistry,
@@ -3926,6 +3973,7 @@ export async function createApplicationServices({
             readNotInstalledUpdate(join(app.getPath("userData"), UPDATE_INSTALL_RECORD_FILE), app.getVersion()),
           ),
           appBundlePath: join(app.getPath("exe"), "..", "..", ".."),
+          restartFromInstalledCopy: (bundlePath: string) => restartFromInstalledCopy(app, bundlePath, currentVersion),
         }
       : {}),
     appImagePath,
@@ -4181,6 +4229,7 @@ export async function createApplicationServices({
     workflowFoldersService,
     browser,
     browserPictureInPicture,
+    detachedBrowserWindow,
     localSignIn,
     browserDock,
     browserView,
@@ -4194,6 +4243,7 @@ export async function createApplicationServices({
     agentHostSettings,
     agentDefaultsSettings,
     agentFolders,
+    channelFolders,
     agentInstructions,
     browserProfiles,
     language,

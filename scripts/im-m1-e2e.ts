@@ -61,7 +61,7 @@ import {
   seedEveryTable,
   sortedRows,
 } from "../src/backend/migration-harness";
-import { IM_TABLES_AFTER_MIGRATION, migration as imMigration } from "../src/backend/migrations/0067-im";
+import { IM_TABLES_AFTER_MIGRATION, migration as imMigration } from "../src/backend/migrations/0068-im";
 import {
   LATEST_SCHEMA_VERSION,
   migrateOpenBotDatabase,
@@ -721,7 +721,7 @@ gate.case({
   title: "A12① 迁移与 schema 同事务：中途失败整体回滚、可安全重试",
   acceptance: "A12①",
   refs: ["design §10 A12", "plan §3 T1 验收", "plan 红线 1 迁移只追加不丢数据 + 单一来源"],
-  needs: [{ task: "T1", what: "迁移与 schema 单一来源", artifact: "src/backend/migrations/0067-im.ts" }],
+  needs: [{ task: "T1", what: "迁移与 schema 单一来源", artifact: "src/backend/migrations/0068-im.ts" }],
   steps: [
     "把库建到 IM 迁移的前一版",
     "预置一张同名但结构不同的 im_messages，让 IM 迁移跑到一半必然失败",
@@ -770,7 +770,7 @@ gate.case({
   title: "A12② 全部已发布 schema fixtures 逐表升级：行数与内容保持",
   acceptance: "A12②",
   refs: ["design §10 A12", "plan 红线 1 fixtures 行数保持"],
-  needs: [{ task: "T1", what: "迁移只追加不丢数据", artifact: "src/backend/migrations/0067-im.ts" }],
+  needs: [{ task: "T1", what: "迁移只追加不丢数据", artifact: "src/backend/migrations/0068-im.ts" }],
   steps: [
     "逐个取已发布 schema fixtures（含新装与逐版升级两类）",
     "每张表灌入 fixtures 行",
@@ -814,7 +814,7 @@ gate.case({
   title: "A12③ 新库与升级库 schema 一致",
   acceptance: "A12③",
   refs: ["design §10 A12", "plan 红线 1 同一段文本既是迁移又是新建库尾部"],
-  needs: [{ task: "T1", what: "DDL 单一来源", artifact: "src/backend/migrations/0067-im.ts" }],
+  needs: [{ task: "T1", what: "DDL 单一来源", artifact: "src/backend/migrations/0068-im.ts" }],
   steps: [
     "路径一：空库直接迁移到最新（新建库）",
     "路径二：从 IM 迁移前一版升级到最新（升级库）",
@@ -853,7 +853,7 @@ gate.case({
   title: "A12④ 二次启动无额外变更",
   acceptance: "A12④",
   refs: ["design §10 A12", "plan §3 T1 验收"],
-  needs: [{ task: "T1", what: "二次迁移无变化", artifact: "src/backend/migrations/0067-im.ts" }],
+  needs: [{ task: "T1", what: "二次迁移无变化", artifact: "src/backend/migrations/0068-im.ts" }],
   steps: [
     "新建库跑一次迁移，记录表结构、声明与迁移版本",
     "同库再跑一次迁移，断言三者完全无变化",

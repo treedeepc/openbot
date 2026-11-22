@@ -57,15 +57,16 @@ import { migration as migration0063 } from "./0063-crm";
 import { migration as migration0064 } from "./0064-provider-history-compaction";
 import { migration as migration0065 } from "./0065-thread-event-compaction";
 import { migration as migration0066 } from "./0066-workflow-step-settings";
-import { migration as migration0067 } from "./0067-im";
-import { migration as migration0068 } from "./0068-im-causal-chain";
-import { migration as migration0069 } from "./0069-im-pairing-code";
-import { migration as migration0070 } from "./0070-im-audit-chain";
-import { migration as migration0071 } from "./0071-im-channel-members-proxy-settings";
-import { migration as migration0072 } from "./0072-im-presence-exposed";
-import { migration as migration0073 } from "./0073-im-relay-settings";
-import { migration as migration0074 } from "./0074-im-read-receipt";
-import { migration as migration0075 } from "./0075-im-peer-device-labels";
+import { migration as migration0067 } from "./0067-thread-message-ordinal-index";
+import { migration as migration0068 } from "./0068-im";
+import { migration as migration0069 } from "./0069-im-causal-chain";
+import { migration as migration0070 } from "./0070-im-pairing-code";
+import { migration as migration0071 } from "./0071-im-audit-chain";
+import { migration as migration0072 } from "./0072-im-channel-members-proxy-settings";
+import { migration as migration0073 } from "./0073-im-presence-exposed";
+import { migration as migration0074 } from "./0074-im-relay-settings";
+import { migration as migration0075 } from "./0075-im-read-receipt";
+import { migration as migration0076 } from "./0076-im-peer-device-labels";
 import type { OpenBotMigration } from "./migration";
 
 /** Every migration, in order. A new migration is a new file with the next version, added at the end. */
@@ -138,4 +139,5 @@ export const MIGRATIONS: readonly OpenBotMigration[] = [
   migration0073,
   migration0074,
   migration0075,
+  migration0076,
 ];

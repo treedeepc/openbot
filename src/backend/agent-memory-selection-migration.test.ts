@@ -65,7 +65,7 @@ describe("agent memory selection migration", () => {
       const before = rows(db);
       migrateOpenBotDatabase(db);
       expect(rows(db)).toEqual(before.map((row) => ({ ...row, site: null })));
-      expect(db.prepare("SELECT MAX(version) AS version FROM schema_migrations").get()).toEqual({ version: 75 });
+      expect(db.prepare("SELECT MAX(version) AS version FROM schema_migrations").get()).toEqual({ version: 76 });
       const selected = databaseRows(
         db
           .prepare(`SELECT m.memory_id, m.text, m.origin FROM projection_agent_memories m

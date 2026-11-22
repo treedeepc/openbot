@@ -4,7 +4,7 @@ import { join, resolve } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { ImDeviceStore } from "../src/backend/im/device-store";
 import { createImIdentity, ImDeviceRegistry, imNewPairingCode } from "../src/backend/im/identity";
-import { addImPairingCodeColumn } from "../src/backend/migrations/0069-im-pairing-code";
+import { addImPairingCodeColumn } from "../src/backend/migrations/0070-im-pairing-code";
 import { LATEST_SCHEMA_VERSION, migrateOpenBotDatabase } from "../src/backend/openbot-database-schema";
 import { record } from "./verify-im-helpers";
 

@@ -299,7 +299,7 @@ import {
   workflowMediaAnswerError,
   workflowMediaError,
 } from "./agent/workflow-generation-error";
-import { confinedWritesAllowed } from "./agent/workspace-sandbox";
+import { confinedWritesAllowed, effectiveAgentFolders } from "./agent/workspace-sandbox";
 import type { AgentApiKeys } from "./agent-api-keys";
 import type { AgentProvider } from "./agent-client";
 import type { AgentTables } from "./agent-data/agent-tables";
@@ -812,6 +812,7 @@ export class AgentService extends EventEmitter<AgentServiceEvents> {
         requireKnownAgent: (agentId) => {
           this.#conversation.requireKnownAgent(agentId);
         },
+        isSideThread: (agentId, taskId) => this.#tasks.isSideThread(agentId, taskId),
       },
     });
     this.#routines = new RoutineScheduler({
@@ -839,6 +840,7 @@ export class AgentService extends EventEmitter<AgentServiceEvents> {
         isRunning: () => this.#initialized && !this.#stopping,
         usageLimited: (agentId) => !this.#usageLimits.mayDrain(agentId) && this.#waitsForLimit(agentId),
         routineThread: (agentId, routineId, routineName) => this.#tasks.routineThread(agentId, routineId, routineName),
+        waitThread: (agentId, taskId) => this.#tasks.waitThread(agentId, taskId),
         routineDeleted: (agentId, routineId) => {
           const keys = options.agentApiKeys;
           const removeKey = keys ? removeWebhookSecretKey(keys, agentId, routineId) : Effect.void;
@@ -1016,6 +1018,9 @@ export class AgentService extends EventEmitter<AgentServiceEvents> {
         afterIdleCheck: () => this.#deleteReleasedFolders(),
         captureConfigRevision: () => this.#endpoints.committedRevision(),
         endpointsPending: (harness) => this.#endpoints.pending(harness),
+        onModelsRelisted: (provider, configRevision) => {
+          if (isCustomProviderHarness(provider)) this.#endpoints.clearReleased(provider, configRevision);
+        },
         onProviderActivated: (provider, configRevision) =>
           Effect.gen({ self: this }, function* () {
             if (isCustomProviderHarness(provider)) {
@@ -1060,6 +1065,7 @@ export class AgentService extends EventEmitter<AgentServiceEvents> {
           this.#emitProviderQueues(provider);
         },
         onProviderHeld: (provider) => this.#emitProviderQueues(provider),
+        onAccountSignedIn: (provider, accountId) => this.#usageLimits.credentialChanged(provider, accountId),
         onAccountsChanged: () => this.#retryHeldMoves(),
         onProvidersUnready: () => this.#refreshHeldAgents(),
       },
@@ -1459,7 +1465,13 @@ export class AgentService extends EventEmitter<AgentServiceEvents> {
                   });
                   const resetDelayMs = providerResetDelayMs(failed.message);
                   const spent = resetDelayMs === null && isBalanceDiagnostic(failed.message);
-                  this.#usageLimits.failed(lead.id, lead.model, resetDelayMs, spent);
+                  this.#usageLimits.failed(
+                    lead.id,
+                    lead.model,
+                    resetDelayMs,
+                    spent,
+                    failed.causeCode === "authentication",
+                  );
                 }
                 return Effect.void;
               }),
@@ -1483,10 +1495,10 @@ export class AgentService extends EventEmitter<AgentServiceEvents> {
       },
       forgetThread: (threadId) => this.#forgetExecutionThread(threadId).pipe(toChannelOperationError),
       loadedSnapshot: (threadId) => this.#conversation.loadedExecutionSnapshot(threadId),
-      busy: (agentId) =>
+      channelTurnLimit: (agentId) => this.#drain.channelTurnLimit(agentId),
+      busy: (agentId, channelId) =>
         this.#channelHeld(agentId) ||
-        this.#mailbox.channelLanes(agentId).length > 0 ||
-        this.#conversation.workingChannelSnapshots(agentId).length > 0 ||
+        this.#drain.channelTurnFull(agentId, channelId) ||
         (this.#tasks.oneTurnAtATime(agentId) &&
           (Boolean(this.#conversation.workingSnapshot(agentId)?.activeTurnId || this.#mailbox.nextQueued(agentId)) ||
             this.#mailbox.laneActive(agentId, null) ||
@@ -1566,6 +1578,9 @@ export class AgentService extends EventEmitter<AgentServiceEvents> {
       queueHoldChanged: () => {
         for (const agent of this.#store.list())
           if (this.#mailbox.queuedDeliveryIds(agent.id).length) this.#mailboxSync.emitQueue(agent.id);
+      },
+      memberFoldersChanged: (agentIds) => {
+        for (const agentId of agentIds) this.#conversation.unloadAgentThreads(agentId);
       },
       error: (error) => this.#emitError("channel_coordination_failed", error),
       routingFailed: ({ channelId, taskId, lead, error }) =>
@@ -1712,7 +1727,7 @@ export class AgentService extends EventEmitter<AgentServiceEvents> {
         liveVoiceRelayed: (deliveryId) => this.#liveVoiceRelayed.get(deliveryId) ?? null,
         isStopping: () => this.#stopping,
         isDeleting: (agentId) => this.#removal.deleting().has(agentId),
-        servesModel: (model, provider) => this.#endpoints.serves(model, provider),
+        servesModel: (model, provider, configRevision) => this.#endpoints.servesClient(model, provider, configRevision),
         requeueChannelDelivery: (deliveryId, continueWork) => this.#requeueChannelDelivery(deliveryId, continueWork),
         mayContinueOnBackup: (agentId) => this.#mayContinueStoppedWork(agentId),
         mayFailOver: (agentId) => this.#mayFailOver(agentId),
@@ -1863,6 +1878,7 @@ export class AgentService extends EventEmitter<AgentServiceEvents> {
         emitToolUsage: (usage) => this.emit("toolUsage", usage),
         turnModel: (agentId, turnId) => this.#drain.modelForTurn(agentId, turnId),
         mayFailOver: (agentId) => this.#mayFailOver(agentId),
+        backupReadyAt: (agentId) => this.#backupReadyAt(agentId),
         poolHasOtherAccount: (agentId) => this.#poolHasOtherAccount(agentId),
         mayContinueOnBackup: (agentId) => this.#mayContinueStoppedWork(agentId),
         requeueChannelDelivery: (deliveryId, continueWork) => this.#requeueChannelDelivery(deliveryId, continueWork),
@@ -1901,6 +1917,11 @@ export class AgentService extends EventEmitter<AgentServiceEvents> {
         inMessagingLane: (agentId, threadId) => this.messaging.inMessagingLane(agentId, threadId),
         isRoutineThread: (threadId) => this.#tasks.isRoutineThreadId(threadId),
         taskOpen: (taskId) => this.#tasks.threadId(taskId) !== null,
+        taskBackgroundLost: (taskId) =>
+          Effect.runFork(
+            this.#tasks.releaseAfterLostWork(taskId).pipe(Effect.forkIn(this.#scope, { startImmediately: true })),
+          ),
+        taskReporting: (taskId) => this.#tasks.reporting(taskId),
         taskFailed: (taskId, message) => this.#tasks.failed(taskId, this.#mcp.redact(message)),
       },
     });
@@ -4109,6 +4130,23 @@ export class AgentService extends EventEmitter<AgentServiceEvents> {
     return this.#usageLimitBackup(agentId) !== undefined || this.#poolBackup(agentId);
   }
 
+  #backupReadyAt(agentId: string): number | null {
+    const agent = this.#store.get(agentId);
+    if (!agent?.backupModels?.automatic || this.#mayFailOver(agentId)) return null;
+    const current = agentModelChoice(agent);
+    const returnTo = agent.usageLimitReturn;
+    return this.#usageLimits.backupWaitEnd(
+      (returnTo ? [...agent.backupModels.order, returnTo] : agent.backupModels.order)
+        .filter(
+          (choice) =>
+            !sameAgentModelChoice(choice, current) &&
+            this.#modelChoiceReady(choice) &&
+            !(workspaceAccessEnforced(agent) && workspaceOnlyUnavailable(choice.provider)),
+        )
+        .map(usageLimitOf),
+    );
+  }
+
   #waitsForLimit(agentId: string): boolean {
     return !this.#mayFailOver(agentId);
   }
@@ -4990,6 +5028,11 @@ export class AgentService extends EventEmitter<AgentServiceEvents> {
     yield* lifecycleStep("publish queues", () => {
       for (const agent of this.#store.list()) this.#mailboxSync.emitQueue(agent.id);
     });
+    yield* Effect.forEach(
+      this.#store.list().flatMap((agent) => this.#tasks.openTaskIds(agent.id)),
+      (taskId) => this.#tasks.releaseAfterLostWork(taskId),
+      { discard: true },
+    );
     yield* this.#routines
       .resumePendingRuns()
       .pipe(
@@ -5367,9 +5410,10 @@ export class AgentService extends EventEmitter<AgentServiceEvents> {
       )
       .pipe(
         Effect.tap(() =>
-          usedKey || this.#providers.ownSignInUsesKey(provider)
+          (usedKey || this.#providers.ownSignInUsesKey(provider)
             ? this.#usageLimits.accountReset(provider, null)
-            : Effect.void,
+            : Effect.void
+          ).pipe(Effect.andThen(this.#usageLimits.credentialChanged(provider, null))),
         ),
         Effect.mapError(
           (failure) => new AgentLifecycleFailed({ operation: "changeProviderCredential", cause: failure.cause }),
@@ -5403,6 +5447,7 @@ export class AgentService extends EventEmitter<AgentServiceEvents> {
         ? yield* this.removeProviderAccount("claude", CLAUDE_API_KEY_ACCOUNT_ID)
         : this.#providers.status();
     yield* this.#usageLimits.accountReset("claude", CLAUDE_API_KEY_ACCOUNT_ID);
+    yield* this.#usageLimits.credentialChanged("claude", CLAUDE_API_KEY_ACCOUNT_ID);
     return status;
   });
 
@@ -5624,6 +5669,7 @@ export class AgentService extends EventEmitter<AgentServiceEvents> {
     this.#attention.clearBrowserTakeovers();
     this.#attention.clearApprovals();
     const clients = [...(yield* this.#providers.dispose()), ...this.#profileClients.release()];
+    for (const client of clients) client.markTurnsStoppedForShutdown?.();
     for (const [agentId, snapshot] of this.#conversation.activeSnapshots()) {
       if (!snapshot.activeTurnId) continue;
       const agent = this.#store.get(agentId);
@@ -5992,6 +6038,9 @@ export class AgentService extends EventEmitter<AgentServiceEvents> {
       (provider) => signIn.has(provider) !== this.#signInProviders.has(provider),
     );
     this.#signInProviders = signIn;
+    for (const provider of changed)
+      if (!signIn.has(provider))
+        Effect.runFork(this.#usageLimits.credentialChanged(provider, null).pipe(Effect.forkIn(this.#scope)));
     if (changed.length > 0)
       queueMicrotask(() => {
         for (const provider of changed) this.#emitProviderQueues(provider);
@@ -6206,7 +6255,7 @@ export class AgentService extends EventEmitter<AgentServiceEvents> {
     if (turnId) {
       this.#tasks.markStopped(task.taskId, turnId, byUser);
       yield* this.#interruptTurn(task.agentId, turnId, task.threadId);
-    }
+    } else if (byUser) yield* this.#tasks.releaseAfterLostWork(task.taskId);
     this.#tasks.changed(task.agentId);
   }).bind(this);
 
@@ -6231,6 +6280,7 @@ export class AgentService extends EventEmitter<AgentServiceEvents> {
       return found;
     });
     this.#tasks.close(task);
+    yield* this.#tasks.releaseHeldRequests(task);
     this.#attention.expireDetached(task.agentId, task.threadId);
     yield* this.#memoryReview.threadClosed(task.agentId, task.threadId);
     this.#drain.scheduleDrain(task.agentId);
@@ -6287,6 +6337,7 @@ export class AgentService extends EventEmitter<AgentServiceEvents> {
       if (wasOpen) this.#tasks.reopen(task);
       throw new Error(sourceText("error.backend.threadStillRunning"));
     });
+    yield* this.#tasks.releaseHeldRequests(task);
     yield* this.#mailbox
       .deleteTaskMessages(task.agentId, task.taskId)
       .pipe(Effect.mapError(({ cause }) => new AgentLifecycleFailed({ operation: "delete task messages", cause })));
@@ -6863,13 +6914,29 @@ export class AgentService extends EventEmitter<AgentServiceEvents> {
     const session = this.#runningSession(agent, targetThreadId);
     if (!session) return false;
     this.#images.interrupt(agentId, session, turnId);
-    yield* client
+    const response = yield* client
       .request("turn/interrupt", { threadId: session, turnId }, decodeRecordResponse)
       .pipe(
         Effect.mapError((failure) => new AgentLifecycleFailed({ operation: "interrupt turn", cause: failure.cause })),
       );
+    if (!mayStop && response.turnActive === false && this.#turnRunsOnlyInSnapshot(agentId, turnId)) {
+      logger.warn("Stop found a chat turn that its provider does not run. It ends as interrupted.", {
+        agentId,
+        turnId,
+      });
+      yield* this.#turn.settleOrphanedTurn(agentId, targetThreadId ?? null, turnId, "interrupted");
+    }
     return true;
   }, Effect.uninterruptible);
+
+  #turnRunsOnlyInSnapshot(agentId: string, turnId: string): boolean {
+    return (
+      this.#turn.turnStartedAt(turnId) === null &&
+      !this.#turn.isCompleting(turnId) &&
+      !this.#turn.hasEnded(turnId) &&
+      this.#conversation.snapshotWithTurn(agentId, turnId) !== undefined
+    );
+  }
 
   #routineRunsIn(agent: AgentSummary, threadId: string | null): boolean {
     const publicThreadId = threadId ?? agent.threadId;
@@ -7170,5 +7237,5 @@ function failureMessages(error: unknown): string[] {
 }
 
 function localWorkspaceAccess(agent: AgentSummary): { allowOutside: boolean; allowedRoots: readonly string[] } {
-  return { allowOutside: !workspaceAccessEnforced(agent), allowedRoots: agent.additionalFolders ?? [] };
+  return { allowOutside: !workspaceAccessEnforced(agent), allowedRoots: effectiveAgentFolders(agent) };
 }

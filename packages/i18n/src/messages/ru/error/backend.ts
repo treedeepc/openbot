@@ -227,7 +227,7 @@ export const messages = {
   "error.backend.agentWaitGone": "Это ожидание не открыто. Агент закрыл его, или кто-то его отменил.",
   "error.backend.agentWaitNoRequest": "Для продолжения ожиданию нужно сообщение. В этом ходе нет сообщения.",
   "error.backend.agentWaitOwnChatOnly":
-    "Открывайте ожидание только в своём чате. Задача канала или мессенджера не может ждать.",
+    "Открывайте ожидание в своём чате или в боковой ветке. Разговор канала или мессенджера не может ждать.",
   "error.backend.agentWaitNoteRequired": "Кратко укажите, для чего это ожидание.",
   "error.backend.agentWaitRoutineGone": "У этого агента нет регулярной задачи с таким id.",
   "error.backend.agentWaitNoRoutine":
@@ -373,6 +373,7 @@ export const messages = {
     "Этот отчёт может отправить только приложение OpenBot на телефоне: оно добавляет версию и журнал поддержки телефона. Откройте этот чат на телефоне. Если вы видите это сообщение там, обновите приложение на телефоне.",
   "error.backend.takeoverInactive": "Этот перехват браузера больше не активен.",
   "error.backend.authSubmitting": "Отправка аутентификации уже выполняется.",
+  "error.backend.apiKeyListFailed": "OpenBot не удалось прочитать сохранённые ключи API.",
   "error.backend.apiKeySaveFailed": "OpenBot не удалось сохранить ключ API. Повторите попытку.",
   "error.backend.apiKeySaving": "Ключ API уже сохраняется.",
   "error.backend.apiKeyAnswerUnreadable":

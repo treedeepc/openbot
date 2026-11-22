@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { ImAuditLog, redactImValue } from "../src/backend/im/audit";
-import { addImAuditChainColumn } from "../src/backend/migrations/0070-im-audit-chain";
+import { addImAuditChainColumn } from "../src/backend/migrations/0071-im-audit-chain";
 import { migrateOpenBotDatabase } from "../src/backend/openbot-database-schema";
 import { itemAt, record, text } from "./verify-im-helpers";
 

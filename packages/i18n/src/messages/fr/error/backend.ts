@@ -240,7 +240,7 @@ export const messages = {
   "error.backend.agentWaitGone": "Cette attente n’est pas ouverte. L’agent l’a fermée, ou quelqu’un l’a annulée.",
   "error.backend.agentWaitNoRequest": "Une attente a besoin d’un message pour continuer. Ce tour n’a pas de message.",
   "error.backend.agentWaitOwnChatOnly":
-    "Ouvrez une attente uniquement dans votre propre discussion. Une tâche de canal ou de messagerie ne peut pas attendre.",
+    "Ouvrez une attente dans votre propre discussion ou dans un fil secondaire. Une conversation de canal ou de messagerie ne peut pas attendre.",
   "error.backend.agentWaitNoteRequired": "Indiquez une courte note qui précise l’objet de l’attente.",
   "error.backend.agentWaitRoutineGone": "Cet agent n’a pas de routine avec cet identifiant.",
   "error.backend.agentWaitNoRoutine":
@@ -391,6 +391,7 @@ export const messages = {
     "Seule l'app OpenBot du téléphone peut envoyer ce rapport, car elle ajoute la version et le journal d'assistance du téléphone. Ouvre cette discussion sur le téléphone. Si tu y vois ce message, mets à jour l'app du téléphone.",
   "error.backend.takeoverInactive": "Cette prise de contrôle du navigateur n’est plus active.",
   "error.backend.authSubmitting": "L’envoi de l’authentification est déjà en cours.",
+  "error.backend.apiKeyListFailed": "OpenBot n’a pas pu lire les clés d’API enregistrées.",
   "error.backend.apiKeySaveFailed": "OpenBot n’a pas pu enregistrer la clé d’API. Réessayez.",
   "error.backend.apiKeySaving": "La clé d’API est déjà en cours d’enregistrement.",
   "error.backend.apiKeyAnswerUnreadable":

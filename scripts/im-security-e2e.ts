@@ -213,7 +213,7 @@ gate.case({
   id: "SEC-04",
   title: "A2 进程重启后仍禁用（因果链落库后重开同判）",
   acceptance: "A2（重启后）",
-  refs: ["design §10 A2", "plan §2 P0-M3 出口", "src/backend/migrations/0068-im-causal-chain.ts"],
+  refs: ["design §10 A2", "plan §2 P0-M3 出口", "src/backend/migrations/0069-im-causal-chain.ts"],
   needs: [{ task: "T5", what: "因果链持久化 + 重启后判定不变", artifact: "src/backend/im/causal-chain.ts" }],
   steps: [
     "把外部因果链写进真实迁移后的 causal_chains 表",

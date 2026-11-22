@@ -245,7 +245,7 @@ export const messages = {
   "error.backend.agentWaitNoRequest":
     "Ein Wartevorgang braucht eine Nachricht, um fortzufahren. Dieser Durchlauf hat keine Nachricht.",
   "error.backend.agentWaitOwnChatOnly":
-    "Öffne einen Wartevorgang nur in deinem eigenen Chat. Eine Kanal- oder Messaging-Aufgabe kann nicht warten.",
+    "Öffne einen Wartevorgang in deinem eigenen Chat oder in einem Nebenthread. Eine Kanal- oder Messaging-Unterhaltung kann nicht warten.",
   "error.backend.agentWaitNoteRequired": "Gib eine kurze Notiz an, wofür der Wartevorgang ist.",
   "error.backend.agentWaitRoutineGone": "Dieser Agent hat keine Routine mit dieser ID.",
   "error.backend.agentWaitNoRoutine":
@@ -397,6 +397,7 @@ export const messages = {
     "Nur die OpenBot-Telefon-App kann diesen Bericht senden, weil sie Version und Supportprotokoll des Telefons hinzufügt. Öffne diesen Chat auf dem Telefon. Wenn du diese Meldung dort siehst, aktualisiere die Telefon-App.",
   "error.backend.takeoverInactive": "Diese Browserübernahme ist nicht mehr aktiv.",
   "error.backend.authSubmitting": "Die Authentifizierung wird bereits übermittelt.",
+  "error.backend.apiKeyListFailed": "OpenBot konnte die gespeicherten API-Schlüssel nicht lesen.",
   "error.backend.apiKeySaveFailed": "OpenBot konnte den API-Schlüssel nicht speichern. Versuche es erneut.",
   "error.backend.apiKeySaving": "Der API-Schlüssel wird bereits gespeichert.",
   "error.backend.apiKeyAnswerUnreadable":
